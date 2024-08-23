@@ -20,7 +20,7 @@ const DEFAULT_COLOR_SUBTITLE = 'Background Colors'
 
 const MENU_ITEMS_DEFAULT = {
   insertColumnRight: {
-    text: 'Insert column right',
+    text: '오른쪽에 열 삽입',
     iconSrc: operationIcon1,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -54,7 +54,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   insertColumnLeft: {
-    text: 'Insert column left',
+    text: '왼쪽에 열 삽입',
     iconSrc: operationIcon2,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -88,7 +88,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   insertRowUp: {
-    text: 'Insert row up',
+    text: '위에 행 삽입',
     iconSrc: operationIcon3,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -111,7 +111,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   insertRowDown: {
-    text: 'Insert row down',
+    text: '아래에 행 삽입',
     iconSrc: operationIcon4,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -134,7 +134,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   mergeCells: {
-    text: 'Merge selected cells',
+    text: '셀 병합',
     iconSrc: operationIcon5,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -184,7 +184,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   unmergeCells: {
-    text: 'Unmerge cells',
+    text: '셀 분리',
     iconSrc: operationIcon6,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -198,7 +198,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   deleteColumn: {
-    text: 'Delete selected columns',
+    text: '선택한 열 삭제',
     iconSrc: operationIcon7,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -226,7 +226,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   deleteRow: {
-    text: 'Delete selected rows',
+    text: '선택한 행 삭제',
     iconSrc: operationIcon8,
     handler () {
       const tableContainer = Quill.find(this.table)
@@ -240,7 +240,7 @@ const MENU_ITEMS_DEFAULT = {
   },
 
   deleteTable: {
-    text: 'Delete table',
+    text: '테이블 삭제',
     iconSrc: operationIcon9,
     handler () {
       const betterTableModule = this.quill.getModule('better-table')
