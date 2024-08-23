@@ -1,7 +1,7 @@
 {
-  "engines" : {
-    "npm" : ">=10.5.0",
-    "node" : ">=18.20.0"
+  "engines": {
+    "npm": ">=10.5.0",
+    "node": ">=18.20.0"
   },
   "name": "quill-better-table-tmaxai-catholic",
   "version": "0.0.1",
@@ -29,6 +29,9 @@
     "url": "https://github.com/YoungeuiHong/quill-better-table/issues"
   },
   "homepage": "https://github.com/YoungeuiHong/quill-better-table#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com/YoungeuiHong"
+  },
   "dependencies": {},
   "devDependencies": {
     "quill": "^2.0.0",
