@@ -3,8 +3,8 @@
     "npm": ">=10.5.0",
     "node": ">=18.20.0"
   },
-  "name": "quill-better-table-tmaxai-catholic",
-  "version": "0.0.2",
+  "name": "@YoungeuiHong/quill-better-table-tmaxai-catholic",
+  "version": "0.0.6",
   "description": "Module for better table in Quill, more useful features are supported.",
   "main": "dist/quill-better-table.js",
   "scripts": {
