@@ -2,7 +2,7 @@ import Quill from 'quill'
 import { css, getRelativeRect } from '../utils'
 import { TableCell } from '../formats/table'
 
-const PRIMARY_COLOR = '#0589f3'
+const PRIMARY_COLOR = '#f88539'
 const LINE_POSITIONS = ['left', 'right', 'top', 'bottom']
 const ERROR_LIMIT = 2
 
