@@ -1,5 +1,5 @@
 import Quill from "quill"
-import { getRelativeRect } from '../utils'
+import { css, getRelativeRect } from '../utils'
 import Header from './header'
 
 const Break = Quill.import("blots/break")
@@ -17,6 +17,7 @@ const CELL_DEFAULT = {
   colspan: 1
 }
 const ERROR_LIMIT = 5
+const CELL_MIN_WIDTH = 50
 
 class TableCellLine extends Block {
   static create(value) {
@@ -24,7 +25,7 @@ class TableCellLine extends Block {
 
     CELL_IDENTITY_KEYS.forEach(key => {
       let identityMaker = key === 'row'
-        ? rowId : cellId
+          ? rowId : cellId
       node.setAttribute(`data-${key}`, value[key] || identityMaker())
     })
 
@@ -86,7 +87,7 @@ class TableCellLine extends Block {
     const colspan = this.domNode.getAttribute('data-colspan')
     const cellBg = this.domNode.getAttribute('data-cell-bg')
     if (this.statics.requiredContainer &&
-      !(this.parent instanceof this.statics.requiredContainer)) {
+        !(this.parent instanceof this.statics.requiredContainer)) {
       this.wrap(this.statics.requiredContainer.blotName, {
         row: rowId,
         colspan,
@@ -106,6 +107,186 @@ TableCellLine.className = "qlbt-cell-line"
 TableCellLine.tagName = "P"
 
 class TableCell extends Container {
+  constructor(scroll, domNode) {
+    super(scroll, domNode);
+
+    this.dragging = false;
+    this.helpLine = null;
+    this.initialClientX = 0;
+    this.currentClientX = 0;
+    this.initialWidth = 0;
+    this.tableRect = {};
+    this.cellRect = {};
+    this.delta = 0;
+    this.draggingFromLeft = false;
+
+    this.addEventListeners();
+  }
+
+  handleDrag = e => {
+    e.preventDefault();
+
+    this.currentClientX = e.clientX;
+
+    if (this.draggingFromLeft) {
+      const previousCell = this.domNode.previousSibling;
+
+      if (previousCell) {
+        const delta = this.currentClientX - this.initialClientX;
+        const newPreviousWidth = this.previousCellWidth + delta;
+
+        if (newPreviousWidth >= CELL_MIN_WIDTH) {
+          previousCell.style.width = `${newPreviousWidth}px`;
+          this.delta = delta;
+        } else {
+          this.delta = CELL_MIN_WIDTH - this.previousCellWidth;
+          previousCell.style.width = `${CELL_MIN_WIDTH}px`;
+        }
+
+        css(this.helpLine, {
+          'left': `${this.cellRect.left + this.delta}px`
+        });
+      }
+    } else {
+      if (this.initialWidth + (this.currentClientX - this.initialClientX) >= CELL_MIN_WIDTH) {
+        this.delta = this.currentClientX - this.initialClientX;
+      } else {
+        this.delta = CELL_MIN_WIDTH - this.initialWidth;
+      }
+
+      css(this.helpLine, {
+        'left': `${this.cellRect.left + this.cellRect.width + this.delta}px`
+      });
+    }
+  }
+
+  handleMouseUp = (e) => {
+    e.preventDefault();
+
+    const tableContainer = Quill.find(this.domNode.closest('table'));
+
+    if (!this.domNode.parentNode || !this.domNode.parentNode.children) return;
+
+    const colIndex = Array.from(this.domNode.parentNode.children).indexOf(this.domNode);
+    const colGroup = tableContainer.colGroup();
+    const colBlot = colGroup && colGroup.children.at(colIndex);
+
+    if (this.dragging) {
+      if (this.draggingFromLeft) {
+        const previousCell = this.domNode.previousSibling;
+        if (previousCell) {
+          const newWidth = this.previousCellWidth + this.delta;
+          const previousColIndex = colIndex - 1;
+          const previousColBlot = colGroup && colGroup.children.at(previousColIndex);
+
+          if (previousColBlot) {
+            previousColBlot.format('width', newWidth);
+          }
+        }
+      } else {
+        const newWidth = this.initialWidth + this.delta;
+        colBlot.format('width', newWidth);
+      }
+
+      // clean up
+      this.initialClientX = 0;
+      this.currentClientX = 0;
+      this.delta = 0;
+      this.initialWidth = 0;
+      this.previousCellWidth = 0;
+      this.dragging = false;
+      this.draggingFromLeft = false;
+      document.body.style.cursor = 'default';
+      if (this.helpLine) {
+        document.body.removeChild(this.helpLine);
+        this.helpLine = null;
+      }
+
+      tableContainer.updateTableWidth();
+    }
+
+    document.removeEventListener('mousemove', this.handleDrag, false);
+    document.removeEventListener('mouseup', this.handleMouseUp, false);
+  };
+
+  handleMouseDown = (e) => {
+    const edgeType = this.isOnEdge(e);
+    if (!edgeType) return;
+
+    document.addEventListener('mousemove', this.handleDrag, false);
+    document.addEventListener('mouseup', this.handleMouseUp, false);
+
+    e.preventDefault();
+
+    this.dragging = true;
+    this.draggingFromLeft = edgeType === 'left';
+    this.initialClientX = e.clientX;
+    this.tableRect = this.domNode.closest('table').getBoundingClientRect();
+    this.cellRect = this.domNode.getBoundingClientRect();
+    this.initialWidth = this.cellRect.width;
+
+    if (this.draggingFromLeft) {
+      const previousCell = this.domNode.previousSibling;
+      if (previousCell) {
+        this.previousCellWidth = previousCell.getBoundingClientRect().width;
+      }
+    }
+
+    this.helpLine = document.createElement('div');
+    css(this.helpLine, {
+      position: 'fixed',
+      top: `${this.tableRect.top}px`,
+      left: `${this.draggingFromLeft ? this.cellRect.left - 1 : this.cellRect.left + this.cellRect.width - 1}px`,
+      zIndex: '100',
+      height: `${this.tableRect.height}px`,
+      width: '1px',
+      backgroundColor: '#f88539',
+    });
+    document.body.appendChild(this.helpLine);
+
+    document.body.style.cursor = 'ew-resize';
+  };
+
+  handleMouseMove = (e) => {
+    const edgeType = this.isOnEdge(e);
+    if (edgeType) {
+      this.domNode.style.cursor = 'ew-resize';
+    } else {
+      this.domNode.style.cursor = 'default';
+    }
+  }
+
+  addEventListeners() {
+    this.domNode.addEventListener('mousedown', this.handleMouseDown);
+    this.domNode.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('resize', this.updateTableWidth.bind(this));
+  }
+
+  updateTableWidth() {
+    const table = this.domNode.closest('table');
+    if (table) {
+      const colGroup = table.querySelector('colgroup');
+      if (colGroup) {
+        let totalWidth = 0;
+        colGroup.querySelectorAll('col').forEach((col) => {
+          totalWidth += parseInt(col.style.width, 10);
+        });
+        table.style.width = `${totalWidth}px`;
+      }
+    }
+  }
+
+  isOnEdge(event) {
+    const rect = this.domNode.getBoundingClientRect();
+    const offset = 5;
+    if (event.clientX >= rect.right - offset && event.clientX <= rect.right + offset) {
+      return 'right';
+    } else if (event.clientX >= rect.left - offset && event.clientX <= rect.left + offset) {
+      return 'left';
+    }
+    return null;
+  }
+
   checkMerge() {
     if (super.checkMerge() && this.next.children.head != null) {
       const thisHead = this.children.head.formats()[this.children.head.statics.blotName]
@@ -113,9 +294,9 @@ class TableCell extends Container {
       const nextHead = this.next.children.head.formats()[this.next.children.head.statics.blotName]
       const nextTail = this.next.children.tail.formats()[this.next.children.tail.statics.blotName]
       return (
-        thisHead.cell === thisTail.cell &&
-        thisHead.cell === nextHead.cell &&
-        thisHead.cell === nextTail.cell
+          thisHead.cell === thisTail.cell &&
+          thisHead.cell === nextHead.cell &&
+          thisHead.cell === nextTail.cell
       )
     }
     return false
@@ -225,7 +406,7 @@ class TableCell extends Container {
     const rowId = this.domNode.getAttribute("data-row")
 
     if (this.statics.requiredContainer &&
-      !(this.parent instanceof this.statics.requiredContainer)) {
+        !(this.parent instanceof this.statics.requiredContainer)) {
       this.wrap(this.statics.requiredContainer.blotName, {
         row: rowId
       })
@@ -260,9 +441,9 @@ class TableRow extends Container {
       const nextTail = this.next.children.tail.formats()
 
       return (
-        thisHead.row === thisTail.row &&
-        thisHead.row === nextHead.row &&
-        thisHead.row === nextTail.row
+          thisHead.row === thisTail.row &&
+          thisHead.row === nextHead.row &&
+          thisHead.row === nextTail.row
       )
     }
     return false
@@ -286,8 +467,8 @@ class TableRow extends Container {
   optimize (context) {
     // optimize function of ShadowBlot
     if (
-      this.statics.requiredContainer &&
-      !(this.parent instanceof this.statics.requiredContainer)
+        this.statics.requiredContainer &&
+        !(this.parent instanceof this.statics.requiredContainer)
     ) {
       this.wrap(this.statics.requiredContainer.blotName)
     }
@@ -338,7 +519,7 @@ class TableCol extends Block {
     return COL_ATTRIBUTES.reduce((formats, attribute) => {
       if (domNode.hasAttribute(`${attribute}`)) {
         formats[attribute] =
-          domNode.getAttribute(`${attribute}`) || undefined
+            domNode.getAttribute(`${attribute}`) || undefined
       }
       return formats
     }, {})
@@ -404,18 +585,18 @@ class TableContainer extends Container {
 
     tableCells.forEach(cell => {
       const cellRect = getRelativeRect(
-        cell.domNode.getBoundingClientRect(),
-        editorWrapper
+          cell.domNode.getBoundingClientRect(),
+          editorWrapper
       )
 
       if (
-        cellRect.x + ERROR_LIMIT > compareRect.x &&
-        cellRect.x1 - ERROR_LIMIT < compareRect.x1
+          cellRect.x + ERROR_LIMIT > compareRect.x &&
+          cellRect.x1 - ERROR_LIMIT < compareRect.x1
       ) {
         removedCells.push(cell)
       } else if (
-        cellRect.x < compareRect.x + ERROR_LIMIT &&
-        cellRect.x1 > compareRect.x1 - ERROR_LIMIT
+          cellRect.x < compareRect.x + ERROR_LIMIT &&
+          cellRect.x1 > compareRect.x1 - ERROR_LIMIT
       ) {
         modifiedCells.push(cell)
       }
@@ -458,28 +639,28 @@ class TableContainer extends Container {
     // bugfix: #21 There will be a empty tr left if delete the last row of a table
     const removedRows = tableRows.filter(row => {
       const rowRect = getRelativeRect(
-        row.domNode.getBoundingClientRect(),
-        editorWrapper
+          row.domNode.getBoundingClientRect(),
+          editorWrapper
       )
-      
+
       return rowRect.y > compareRect.y - ERROR_LIMIT &&
-        rowRect.y1 < compareRect.y1 + ERROR_LIMIT
+          rowRect.y1 < compareRect.y1 + ERROR_LIMIT
     })
 
     tableCells.forEach(cell => {
       const cellRect = getRelativeRect(
-        cell.domNode.getBoundingClientRect(),
-        editorWrapper
+          cell.domNode.getBoundingClientRect(),
+          editorWrapper
       )
 
       if (
-        cellRect.y > compareRect.y - ERROR_LIMIT &&
-        cellRect.y1 < compareRect.y1 + ERROR_LIMIT
+          cellRect.y > compareRect.y - ERROR_LIMIT &&
+          cellRect.y1 < compareRect.y1 + ERROR_LIMIT
       ) {
         removedCells.push(cell)
       } else if (
-        cellRect.y < compareRect.y + ERROR_LIMIT &&
-        cellRect.y1 > compareRect.y1 - ERROR_LIMIT
+          cellRect.y < compareRect.y + ERROR_LIMIT &&
+          cellRect.y1 > compareRect.y1 - ERROR_LIMIT
       ) {
         modifiedCells.push(cell)
 
@@ -497,13 +678,13 @@ class TableContainer extends Container {
     // compute length of removed rows
     const removedRowsLength = this.rows().reduce((sum, row) => {
       let rowRect  = getRelativeRect(
-        row.domNode.getBoundingClientRect(),
-        editorWrapper
+          row.domNode.getBoundingClientRect(),
+          editorWrapper
       )
 
       if (
-        rowRect.y > compareRect.y - ERROR_LIMIT &&
-        rowRect.y1 < compareRect.y1 + ERROR_LIMIT
+          rowRect.y > compareRect.y - ERROR_LIMIT &&
+          rowRect.y1 < compareRect.y1 + ERROR_LIMIT
       ) {
         sum += 1
       }
@@ -513,16 +694,16 @@ class TableContainer extends Container {
     // it must excute before the table layout changed with other operation
     fallCells.forEach(cell => {
       const cellRect = getRelativeRect(
-        cell.domNode.getBoundingClientRect(),
-        editorWrapper
+          cell.domNode.getBoundingClientRect(),
+          editorWrapper
       )
       const nextRow = cell.parent.next
       const cellsInNextRow = nextRow.children
 
       const refCell = cellsInNextRow.reduce((ref, compareCell) => {
         const compareRect = getRelativeRect(
-          compareCell.domNode.getBoundingClientRect(),
-          editorWrapper
+            compareCell.domNode.getBoundingClientRect(),
+            editorWrapper
         )
         if (Math.abs(cellRect.x1 - compareRect.x) < ERROR_LIMIT) {
           ref = compareCell
@@ -559,10 +740,10 @@ class TableContainer extends Container {
     const id = cellId()
     const rId = tableRow.formats().row
     const tableCell = this.scroll.create(
-      TableCell.blotName,
-      Object.assign({}, CELL_DEFAULT, {
-        row: rId
-      })
+        TableCell.blotName,
+        Object.assign({}, CELL_DEFAULT, {
+          row: rId
+        })
     )
     const cellLine = this.scroll.create(TableCellLine.blotName, {
       row: rId,
@@ -589,8 +770,8 @@ class TableContainer extends Container {
     const tableCells = this.descendants(TableCell)
     tableCells.forEach(cell => {
       const cellRect = getRelativeRect(
-        cell.domNode.getBoundingClientRect(),
-        editorWrapper
+          cell.domNode.getBoundingClientRect(),
+          editorWrapper
       )
 
       if (isRight) {
@@ -599,8 +780,8 @@ class TableContainer extends Container {
           // add a new table cell right aside this table cell
           addAsideCells.push(cell)
         } else if (
-          compareRect.x1 - cellRect.x > ERROR_LIMIT &&
-          compareRect.x1 - cellRect.x1 < -ERROR_LIMIT
+            compareRect.x1 - cellRect.x > ERROR_LIMIT &&
+            compareRect.x1 - cellRect.x1 < -ERROR_LIMIT
         ) {
           // the right of selected boundary is inside this table cell
           // colspan of this table cell will increase 1
@@ -612,8 +793,8 @@ class TableContainer extends Container {
           // add a new table cell left aside this table cell
           addAsideCells.push(cell)
         } else if (
-          compareRect.x - cellRect.x > ERROR_LIMIT &&
-          compareRect.x - cellRect.x1 < -ERROR_LIMIT
+            compareRect.x - cellRect.x > ERROR_LIMIT &&
+            compareRect.x - cellRect.x1 < -ERROR_LIMIT
         ) {
           // the left of selected boundary is inside this table cell
           // colspan of this table cell will increase 1
@@ -629,11 +810,11 @@ class TableContainer extends Container {
       const rId = tableRow.formats().row
       const cellFormats = cell.formats()
       const tableCell = this.scroll.create(
-        TableCell.blotName,
-        Object.assign({}, CELL_DEFAULT, {
-          row: rId,
-          rowspan: cellFormats.rowspan
-        })
+          TableCell.blotName,
+          Object.assign({}, CELL_DEFAULT, {
+            row: rId,
+            rowspan: cellFormats.rowspan
+          })
       )
       const cellLine = this.scroll.create(TableCellLine.blotName, {
         row: rId,
@@ -690,16 +871,16 @@ class TableContainer extends Container {
 
     tableCells.forEach(cell => {
       const cellRect = getRelativeRect(
-        cell.domNode.getBoundingClientRect(),
-        editorWrapper
+          cell.domNode.getBoundingClientRect(),
+          editorWrapper
       )
 
       if (isDown) {
         if (Math.abs(cellRect.y1 - compareRect.y1) < ERROR_LIMIT) {
           addBelowCells.push(cell)
         } else if (
-          compareRect.y1 - cellRect.y > ERROR_LIMIT &&
-          compareRect.y1 - cellRect.y1 < -ERROR_LIMIT
+            compareRect.y1 - cellRect.y > ERROR_LIMIT &&
+            compareRect.y1 - cellRect.y1 < -ERROR_LIMIT
         ) {
           modifiedCells.push(cell)
         }
@@ -707,8 +888,8 @@ class TableContainer extends Container {
         if (Math.abs(cellRect.y - compareRect.y) < ERROR_LIMIT) {
           addBelowCells.push(cell)
         } else if (
-          compareRect.y - cellRect.y > ERROR_LIMIT &&
-          compareRect.y - cellRect.y1 < -ERROR_LIMIT
+            compareRect.y - cellRect.y > ERROR_LIMIT &&
+            compareRect.y - cellRect.y1 < -ERROR_LIMIT
         ) {
           modifiedCells.push(cell)
         }
@@ -729,7 +910,7 @@ class TableContainer extends Container {
       const cellFormats = cell.formats()
 
       const tableCell = this.scroll.create(TableCell.blotName, Object.assign(
-        {}, CELL_DEFAULT, { row: rId, colspan: cellFormats.colspan }
+          {}, CELL_DEFAULT, { row: rId, colspan: cellFormats.colspan }
       ))
       const cellLine = this.scroll.create(TableCellLine.blotName, {
         row: rId,
@@ -751,8 +932,8 @@ class TableContainer extends Container {
 
     const refRow = this.rows().find(row => {
       let rowRect = getRelativeRect(
-        row.domNode.getBoundingClientRect(),
-        editorWrapper
+          row.domNode.getBoundingClientRect(),
+          editorWrapper
       )
       if (isDown) {
         return Math.abs(rowRect.y - compareRect.y - compareRect.height) < ERROR_LIMIT
@@ -817,20 +998,20 @@ class TableContainer extends Container {
         let nextRow = tableCell.row().next
         while (i > 1) {
           let refInNextRow = nextRow.children
-            .reduce((result, cell) => {
-              let compareRect = getRelativeRect(
-                tableCell.domNode.getBoundingClientRect(),
-                editorWrapper
-              )
-              let cellRect = getRelativeRect(
-                cell.domNode.getBoundingClientRect(),
-                editorWrapper
-              )
-              if (Math.abs(compareRect.x1 - cellRect.x) < ERROR_LIMIT) {
-                result = cell
-              }
-              return result
-            }, null)
+              .reduce((result, cell) => {
+                let compareRect = getRelativeRect(
+                    tableCell.domNode.getBoundingClientRect(),
+                    editorWrapper
+                )
+                let cellRect = getRelativeRect(
+                    cell.domNode.getBoundingClientRect(),
+                    editorWrapper
+                )
+                if (Math.abs(compareRect.x1 - cellRect.x) < ERROR_LIMIT) {
+                  result = cell
+                }
+                return result
+              }, null)
 
           for (let i = cellColspan; i > 0; i--) {
             this.insertCell(nextRow, refInNextRow)
@@ -866,7 +1047,7 @@ class TableViewWrapper extends Container {
       }
 
       if (tableModule.tableSelection &&
-        tableModule.tableSelection.selectedTds.length > 0) {
+          tableModule.tableSelection.selectedTds.length > 0) {
         tableModule.tableSelection.repositionHelpLines()
       }
     }, false)
@@ -900,18 +1081,17 @@ TableColGroup.requiredContainer = TableContainer
 
 TableCol.requiredContainer = TableColGroup
 
-
 function rowId() {
   const id = Math.random()
-    .toString(36)
-    .slice(2, 6)
+      .toString(36)
+      .slice(2, 6)
   return `row-${id}`
 }
 
 function cellId() {
   const id = Math.random()
-    .toString(36)
-    .slice(2, 6)
+      .toString(36)
+      .slice(2, 6)
   return `cell-${id}`
 }
 
@@ -934,4 +1114,3 @@ export {
   CELL_IDENTITY_KEYS,
   CELL_ATTRIBUTES
 }
-

@@ -5,7 +5,7 @@ const COL_TOOL_HEIGHT = 12
 const COL_TOOL_CELL_HEIGHT = 12
 const ROW_TOOL_WIDTH = 12
 const CELL_MIN_WIDTH = 50
-const PRIMARY_COLOR = '#35A7ED'
+const PRIMARY_COLOR = '#f88539'
 
 export default class TableColumnTool {
   constructor (table, quill, options) {
@@ -29,6 +29,7 @@ export default class TableColumnTool {
     this.updateToolCells()
     parent.appendChild(this.domNode)
     css(this.domNode, {
+      opacity: 0,
       width: `${tableViewRect.width}px`,
       height: `${COL_TOOL_HEIGHT}px`,
       left: `${tableViewRect.left - containerRect.left + parent.scrollLeft}px`,
