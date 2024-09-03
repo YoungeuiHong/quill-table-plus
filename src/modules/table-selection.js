@@ -214,6 +214,45 @@ export default class TableSelection {
       })
     })
   }
+
+  equalizeColumnWidths() {
+    const selectedCells = this.selectedTds.map(td => td.domNode);
+    if (selectedCells.length === 0) return;
+
+    const selectedColumns = new Set();
+    selectedCells.forEach(cell => {
+      const colIndex = Array.from(cell.parentElement.children).indexOf(cell);
+      selectedColumns.add(colIndex);
+    });
+
+    let totalWidth = 0;
+    let columnCount = 0;
+
+    selectedColumns.forEach(index => {
+      const cell = selectedCells.find(cell => Array.from(cell.parentElement.children).indexOf(cell) === index);
+      if (cell) {
+        totalWidth += cell.clientWidth;
+        columnCount += 1;
+      }
+    });
+
+    const averageWidth = totalWidth / columnCount;
+
+    selectedColumns.forEach(colIndex => {
+      const tableContainer = Quill.find(this.table);
+      const colBlot = tableContainer.colGroup().children.at(colIndex);
+
+      colBlot.format('width', averageWidth);
+
+      selectedCells.forEach(cell => {
+        if (Array.from(cell.parentElement.children).indexOf(cell) === colIndex) {
+          css(cell, { 'width': `${averageWidth}px` });
+        }
+      });
+    });
+
+    this.quill.update(Quill.sources.USER);
+  }
 }
 
 function computeBoundaryFromRects (startRect, endRect) {

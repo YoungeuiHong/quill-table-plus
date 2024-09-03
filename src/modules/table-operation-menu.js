@@ -249,7 +249,17 @@ const MENU_ITEMS_DEFAULT = {
       tableContainer.remove()
       this.quill.update(Quill.sources.USER)
     }
-  }
+  },
+  equalizeColumns: {
+    text: '열 너비를 같게',
+    iconSrc: operationIcon6,
+    handler() {
+      const tableContainer = Quill.find(this.table);
+      this.tableSelection.equalizeColumnWidths();
+      this.tableColumnTool.updateToolCells();
+      this.quill.update(Quill.sources.USER);
+    }
+  },
 }
 
 export default class TableOperationMenu {
