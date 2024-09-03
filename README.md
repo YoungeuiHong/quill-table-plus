@@ -1,13 +1,10 @@
-# quill-better-table
-A module for better table in Quill, more useful features are supported. There is a list of features below. Thanks [quilljs](https://quilljs.com/) for its awesome extensibility. Hope that quill-better-table could help you.
-
-# Online Demo
-[quill-better-table Codepen Demo](https://codepen.io/soccerloway/pen/WWJowj)
+# quill-table-plus
+A Quill editor extension that adds powerful table editing capabilities, enabling users to create, modify, and manage tables with ease. There is a list of features below. Thanks [quilljs](https://quilljs.com/) and [quill-better-table](https://github.com/soccerloway/quill-better-table) for its awesome extensibility. Hope that quill-table-plus could help you.
 
 # Updated v1.2.10
 <ul>
   <li>
-    <p>Replace TableCellLine.tagName from `DIV` to `P`. Using `DIV` to implement TableCellLine led a copy/paste issue: <a href="https://github.com/soccerloway/quill-better-table/issues/50">Pasting plain text also changes to table format</a>. There are many more similar situations. When the user pastes the DIV tag into the editor, the DIV will be treated as a TableCellLine. Using `P` is more appropriate and fixes the mentioned issue. If this update caused any other new issues, tell me as soon as possible please, thanks！ Best wishes.</p>
+    <p>Replace TableCellLine.tagName from `DIV` to `P`. Using `DIV` to implement TableCellLine led a copy/paste issue: <a href="https://github.com/soccerloway/quill-table-plus/issues/50">Pasting plain text also changes to table format</a>. There are many more similar situations. When the user pastes the DIV tag into the editor, the DIV will be treated as a TableCellLine. Using `P` is more appropriate and fixes the mentioned issue. If this update caused any other new issues, tell me as soon as possible please, thanks！ Best wishes.</p>
   </li>
 </ul>
 
@@ -60,7 +57,7 @@ Since I use webpack externals to bundle, you must expose `Quill` to window objec
 
 # Installation
 ```
-npm install quill-better-table
+npm install quill-table-plus
 ```
 
 # Usage
@@ -70,15 +67,15 @@ Load quill and style dependencies
 ```
 ```
 <link href="https://cdnjs.cloudflare.com/ajax/libs/quill/2.0.0-dev.3/quill.snow.min.css" rel="stylesheet">
-<link href="https://unpkg.com/quill-better-table@1.2.8/dist/quill-better-table.css" rel="stylesheet">
+<link href="https://unpkg.com/quill-table-plus@1.2.8/dist/quill-table-plus.css" rel="stylesheet">
 ```
 
 ES6
 ```
-import QuillBetterTable from 'quill-better-table'
+import QuillTablePlus from 'quill-table-plus'
 
 Quill.register({
-  'modules/better-table': QuillBetterTable
+  'modules/table-plus': QuillTablePlus
 }, true)
 
 window.onload = () => {
@@ -86,7 +83,7 @@ window.onload = () => {
     theme: 'snow',
     modules: {
       table: false,  // disable table module
-      'better-table': {
+      'table-plus': {
         operationMenu: {
           items: {
             unmergeCells: {
@@ -96,23 +93,23 @@ window.onload = () => {
         }
       },
       keyboard: {
-        bindings: QuillBetterTable.keyboardBindings
+        bindings: QuillTablePlus.keyboardBindings
       }
     }
   })
 
   document.body.querySelector('#insert-table')
     .onclick = () => {
-      let tableModule = quill.getModule('better-table')
+      let tableModule = quill.getModule('table-plus')
       tableModule.insertTable(3, 3)
     }
 }
 ```
 
 # Module methods
-first, you can get quill-better-table module by `quill.getModule`
+first, you can get quill-table-plus module by `quill.getModule`
 ```
-let module = quill.getModule('better-table')
+let module = quill.getModule('table-plus')
 ```
 ## module.getTable(range = quill.getSelection())
 get an array with TableContainer, TableRow, TableCell, offset through the given range.
@@ -129,13 +126,13 @@ module.insertTable(3, 3)
 ```
 
 # Module Options
-quill-better-table only provide operation options now.
+quill-table-plus only provide operation options now.
 ```
 const quill = new Quill('#editor', {
   theme: 'snow',
   modules: {
     table: false,  // disable table module
-    'better-table': {
+    'table-plus': {
       operationMenu: {
         items: {
           unmergeCells: {
@@ -149,7 +146,7 @@ const quill = new Quill('#editor', {
       }
     },
     keyboard: {
-      bindings: QuillBetterTable.keyboardBindings
+      bindings: QuillTablePlus.keyboardBindings
     }
   }
 })
@@ -193,7 +190,7 @@ Background colors is optional, the default is hidden. If you need this feature, 
 ```
 
 # Community
-Send me an email(<a href="mailto: lw54760187@hotmail.com">lw54760187@hotmail.com</a>) or Contribute on [Issues](https://github.com/soccerloway/quill-better-table/issues), I glad to hear your suggestion.
+Send me an email(<a href="mailto: lw54760187@hotmail.com">lw54760187@hotmail.com</a>) or Contribute on [Issues](https://github.com/soccerloway/quill-table-plus/issues), I glad to hear your suggestion.
 
 # License
 [MIT License](https://rmm5t.mit-license.org/)

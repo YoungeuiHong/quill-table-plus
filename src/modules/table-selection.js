@@ -42,7 +42,7 @@ export default class TableSelection {
   }
 
   mouseDownHandler (e) {
-    if (e.button !== 0 || !e.target.closest(".quill-better-table")) return
+    if (e.button !== 0 || !e.target.closest(".quill-table-plus")) return
     this.quill.root.addEventListener('mousemove', mouseMoveHandler, false)
     this.quill.root.addEventListener('mouseup', mouseUpHandler, false)
 
@@ -59,7 +59,7 @@ export default class TableSelection {
     this.repositionHelpLines()
 
     function mouseMoveHandler (e) {
-      if (e.button !== 0 || !e.target.closest(".quill-better-table")) return
+      if (e.button !== 0 || !e.target.closest(".quill-table-plus")) return
       const endTd = e.target.closest('td[data-row]')
       const endTdRect = getRelativeRect(
         endTd.getBoundingClientRect(),

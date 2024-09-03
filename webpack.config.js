@@ -9,13 +9,13 @@ module.exports = (env, argv) => {
 
   if (env && env.minimize) {
     entry = {
-      'quill-better-table.min.js': ['./src/quill-better-table.js']
+      'quill-table-plus.min.js': ['./src/quill-table-plus.js']
     }
     minimize = true
   } else {
     entry = {
-      'quill-better-table.js': ['./src/quill-better-table.js'],
-      'quill-better-table': './src/assets/quill-better-table.scss',
+      'quill-table-plus.js': ['./src/quill-table-plus.js'],
+      'quill-table-plus': './src/assets/quill-table-plus.scss',
       'demo/demo1.js': './demo/js/demo1.js'
     }
     minimize = false
@@ -30,7 +30,7 @@ module.exports = (env, argv) => {
 
     output:{
       filename: '[name]',
-      library: 'quillBetterTable',
+      library: 'quillTablePlus',
       libraryExport: 'default',
       libraryTarget: 'umd',
       path: path.resolve(__dirname, './dist/')
@@ -119,7 +119,7 @@ module.exports = (env, argv) => {
 
     plugins:[
       new HtmlWebpackPlugin({
-        title:'quill-better-table',
+        title:'quill-table-plus',
         template:'./demo/demo1.html',
         filename:'demo/demo1.html',
       }),

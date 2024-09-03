@@ -243,9 +243,9 @@ const MENU_ITEMS_DEFAULT = {
     text: '테이블 삭제',
     iconSrc: operationIcon9,
     handler () {
-      const betterTableModule = this.quill.getModule('better-table')
+      const quillTableModule = this.quill.getModule('table-plus')
       const tableContainer = Quill.find(this.table)
-      betterTableModule.hideTableTools()
+      quillTableModule.hideTableTools()
       tableContainer.remove()
       this.quill.update(Quill.sources.USER)
     }
@@ -264,13 +264,13 @@ const MENU_ITEMS_DEFAULT = {
 
 export default class TableOperationMenu {
   constructor (params, quill, options) {
-    const betterTableModule = quill.getModule('better-table')
-    this.tableSelection = betterTableModule.tableSelection
+    const quillTableModule = quill.getModule('table-plus')
+    this.tableSelection = quillTableModule.tableSelection
     this.table = params.table
     this.quill = quill
     this.options = options
     this.menuItems = Object.assign({}, MENU_ITEMS_DEFAULT, options.items)
-    this.tableColumnTool = betterTableModule.columnTool
+    this.tableColumnTool = quillTableModule.columnTool
     this.boundary = this.tableSelection.boundary
     this.selectedTds = this.tableSelection.selectedTds
     this.destroyHandler = this.destroy.bind(this)

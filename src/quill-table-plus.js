@@ -28,7 +28,7 @@ import {
   cellId
 } from './formats/table';
 
-class BetterTable extends Module {
+class QuillTablePlus extends Module {
   static register() {
     Quill.register(TableCol, true);
     Quill.register(TableColGroup, true);
@@ -46,7 +46,7 @@ class BetterTable extends Module {
   constructor(quill, options) {
     super(quill, options);
 
-    // handle click on quill-better-table
+    // handle click on quill-table-plus
     this.quill.root.addEventListener('click', (evt) => {
       // bugfix: evt.path is undefined in Safari, FF, Micro Edge
       const path = getEventComposedPath(evt)
@@ -56,7 +56,7 @@ class BetterTable extends Module {
       const tableNode = path.filter(node => {
         return node.tagName &&
           node.tagName.toUpperCase() === 'TABLE' &&
-          node.classList.contains('quill-better-table')
+          node.classList.contains('quill-table-plus')
       })[0]
 
       if (tableNode) {
@@ -71,7 +71,7 @@ class BetterTable extends Module {
       }
     }, false)
 
-    // handle right click on quill-better-table
+    // handle right click on quill-table-plus
     this.quill.root.addEventListener('contextmenu', (evt) => {
       if (!this.table) return true
       evt.preventDefault()
@@ -83,7 +83,7 @@ class BetterTable extends Module {
       const tableNode = path.filter(node => {
         return node.tagName &&
           node.tagName.toUpperCase() === 'TABLE' &&
-          node.classList.contains('quill-better-table')
+          node.classList.contains('quill-table-plus')
       })[0]
 
       const rowNode = path.filter(node => {
@@ -148,7 +148,7 @@ class BetterTable extends Module {
     let thisBinding = quill.keyboard.bindings['Backspace'].pop()
     quill.keyboard.bindings['Backspace'].splice(0, 1, thisBinding)
 
-    // add Matchers to match and render quill-better-table for initialization
+    // add Matchers to match and render quill-table-plus for initialization
     // or pasting
     quill.clipboard.addMatcher('td', matchTableCell)
     quill.clipboard.addMatcher('th', matchTableHeader)
@@ -220,7 +220,7 @@ class BetterTable extends Module {
   }
 }
 
-BetterTable.keyboardBindings = {
+QuillTablePlus.keyboardBindings = {
   'table-cell-line backspace': {
     key: 'Backspace',
     format: ['table-cell-line'],
@@ -391,4 +391,4 @@ function isInTableCell (current) {
     : false
 }
 
-export default BetterTable;
+export default QuillTablePlus;

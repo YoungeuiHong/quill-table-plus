@@ -1,9 +1,9 @@
-import QuillBetterTable from 'src/quill-better-table.js'
-// import better-table styles file
-import 'src/assets/quill-better-table.scss'
+import QuillTablePlus from 'src/quill-table-plus.js'
+// import table-plus styles file
+import 'src/assets/quill-table-plus.scss'
 
 Quill.register({
-  'modules/better-table': QuillBetterTable
+  'modules/table-plus': QuillTablePlus
 }, true)
 
 window.onload = () => {
@@ -11,7 +11,7 @@ window.onload = () => {
     theme: 'snow',
     modules: {
       table: false,
-      'better-table': {
+      'table-plus': {
         operationMenu: {
           items: {
             unmergeCells: {
@@ -25,12 +25,12 @@ window.onload = () => {
         }
       },
       keyboard: {
-        bindings: QuillBetterTable.keyboardBindings
+        bindings: QuillTablePlus.keyboardBindings
       }
     }
   })
 
-  let tableModule = quill.getModule('better-table')
+  let tableModule = quill.getModule('table-plus')
   document.body.querySelector('#insert-table')
     .onclick = () => {
       tableModule.insertTable(3, 3)

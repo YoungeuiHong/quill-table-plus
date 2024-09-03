@@ -3,18 +3,18 @@
     "npm": ">=10.5.0",
     "node": ">=18.20.0"
   },
-  "name": "@YoungeuiHong/quill-better-table-tmaxai-catholic",
+  "name": "@YoungeuiHong/quill-table-plus-tmaxai-catholic",
   "version": "0.0.6",
-  "description": "Module for better table in Quill, more useful features are supported.",
-  "main": "dist/quill-better-table.js",
+  "description": "A Quill editor extension that adds powerful table editing capabilities, enabling users to create, modify, and manage tables with ease.",
+  "main": "dist/quill-table-plus.js",
   "scripts": {
     "dev": "webpack-dev-server --config webpack.config.js --mode=development",
-    "build": "webpack --config webpack.config.js --mode=production --env.minimize; webpack --config webpack.config.js --mode=production; rm dist/quill-better-table;",
+    "build": "webpack --config webpack.config.js --mode=production --env.minimize; webpack --config webpack.config.js --mode=production; rm dist/quill-table-plus;",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/YoungeuiHong/quill-better-table.git"
+    "url": "git+https://github.com/YoungeuiHong/quill-table-plus.git"
   },
   "keywords": [
     "quill",
@@ -26,9 +26,9 @@
   "author": "soccerloway",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/YoungeuiHong/quill-better-table/issues"
+    "url": "https://github.com/YoungeuiHong/quill-table-plus/issues"
   },
-  "homepage": "https://github.com/YoungeuiHong/quill-better-table#readme",
+  "homepage": "https://github.com/YoungeuiHong/quill-table-plus#readme",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com/YoungeuiHong"
   },
