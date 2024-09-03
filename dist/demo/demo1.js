@@ -4,9 +4,9 @@
 	else if(typeof define === 'function' && define.amd)
 		define(["quill"], factory);
 	else if(typeof exports === 'object')
-		exports["quillBetterTable"] = factory(require("quill"));
+		exports["quillTablePlus"] = factory(require("quill"));
 	else
-		root["quillBetterTable"] = factory(root["Quill"]);
+		root["quillTablePlus"] = factory(root["Quill"]);
 })(self, (__WEBPACK_EXTERNAL_MODULE__912__) => {
 return /******/ (() => { // webpackBootstrap
 /******/ 	"use strict";
@@ -15,20 +15,20 @@ return /******/ (() => { // webpackBootstrap
 /***/ 574:
 /***/ ((__unused_webpack_module, __unused_webpack___webpack_exports__, __webpack_require__) => {
 
-/* harmony import */ var src_quill_better_table_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(181);
-/* harmony import */ var src_assets_quill_better_table_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(603);
+/* harmony import */ var src_quill_table_plus_js__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(920);
+/* harmony import */ var src_assets_quill_table_plus_scss__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(999);
 
-// import better-table styles file
+// import table-plus styles file
 
 Quill.register({
-  'modules/better-table': src_quill_better_table_js__WEBPACK_IMPORTED_MODULE_0__["default"]
+  'modules/table-plus': src_quill_table_plus_js__WEBPACK_IMPORTED_MODULE_0__["default"]
 }, true);
 window.onload = () => {
   const quill = new Quill('#editor-wrapper', {
     theme: 'snow',
     modules: {
       table: false,
-      'better-table': {
+      'table-plus': {
         operationMenu: {
           items: {
             unmergeCells: {
@@ -41,11 +41,11 @@ window.onload = () => {
         }
       },
       keyboard: {
-        bindings: src_quill_better_table_js__WEBPACK_IMPORTED_MODULE_0__["default"].keyboardBindings
+        bindings: src_quill_table_plus_js__WEBPACK_IMPORTED_MODULE_0__["default"].keyboardBindings
       }
     }
   });
-  let tableModule = quill.getModule('better-table');
+  let tableModule = quill.getModule('table-plus');
   document.body.querySelector('#insert-table').onclick = () => {
     tableModule.insertTable(3, 3);
   };
@@ -59,13 +59,13 @@ window.onload = () => {
 
 /***/ }),
 
-/***/ 181:
+/***/ 920:
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 
 // EXPORTS
 __webpack_require__.d(__webpack_exports__, {
-  "default": () => (/* binding */ quill_better_table)
+  "default": () => (/* binding */ quill_table_plus)
 });
 
 // EXTERNAL MODULE: external {"commonjs":"quill","commonjs2":"quill","amd":"quill","root":"Quill"}
@@ -169,7 +169,7 @@ const COL_TOOL_HEIGHT = 12;
 const COL_TOOL_CELL_HEIGHT = 12;
 const ROW_TOOL_WIDTH = 12;
 const CELL_MIN_WIDTH = 50;
-const PRIMARY_COLOR = '#35A7ED';
+const PRIMARY_COLOR = '#f88539';
 class TableColumnTool {
   constructor(table, quill, options) {
     if (!table) return null;
@@ -189,6 +189,7 @@ class TableColumnTool {
     this.updateToolCells();
     parent.appendChild(this.domNode);
     css(this.domNode, {
+      opacity: 0,
       width: `${tableViewRect.width}px`,
       height: `${COL_TOOL_HEIGHT}px`,
       left: `${tableViewRect.left - containerRect.left + parent.scrollLeft}px`,
@@ -290,7 +291,7 @@ class TableColumnTool {
       $helpLine.remove();
       $helpLine = null;
       tableContainer.updateTableWidth();
-      const tableSelection = this.quill.getModule('better-table').tableSelection;
+      const tableSelection = this.quill.getModule('table-plus').tableSelection;
       tableSelection && tableSelection.clearSelection();
     };
     const handleMousedown = e => {
@@ -443,6 +444,7 @@ const CELL_DEFAULT = {
   colspan: 1
 };
 const ERROR_LIMIT = 5;
+const table_CELL_MIN_WIDTH = 50;
 class TableCellLine extends table_Block {
   static create(value) {
     const node = super.create(value);
@@ -524,6 +526,157 @@ TableCellLine.blotName = "table-cell-line";
 TableCellLine.className = "qlbt-cell-line";
 TableCellLine.tagName = "P";
 class TableCell extends Container {
+  constructor(scroll, domNode) {
+    super(scroll, domNode);
+    this.dragging = false;
+    this.helpLine = null;
+    this.initialClientX = 0;
+    this.currentClientX = 0;
+    this.initialWidth = 0;
+    this.tableRect = {};
+    this.cellRect = {};
+    this.delta = 0;
+    this.draggingFromLeft = false;
+    this.addEventListeners();
+  }
+  handleDrag = e => {
+    e.preventDefault();
+    this.currentClientX = e.clientX;
+    if (this.draggingFromLeft) {
+      const previousCell = this.domNode.previousSibling;
+      if (previousCell) {
+        const delta = this.currentClientX - this.initialClientX;
+        const newPreviousWidth = this.previousCellWidth + delta;
+        if (newPreviousWidth >= table_CELL_MIN_WIDTH) {
+          previousCell.style.width = `${newPreviousWidth}px`;
+          this.delta = delta;
+        } else {
+          this.delta = table_CELL_MIN_WIDTH - this.previousCellWidth;
+          previousCell.style.width = `${table_CELL_MIN_WIDTH}px`;
+        }
+        css(this.helpLine, {
+          'left': `${this.cellRect.left + this.delta}px`
+        });
+      }
+    } else {
+      if (this.initialWidth + (this.currentClientX - this.initialClientX) >= table_CELL_MIN_WIDTH) {
+        this.delta = this.currentClientX - this.initialClientX;
+      } else {
+        this.delta = table_CELL_MIN_WIDTH - this.initialWidth;
+      }
+      css(this.helpLine, {
+        'left': `${this.cellRect.left + this.cellRect.width + this.delta}px`
+      });
+    }
+  };
+  handleMouseUp = e => {
+    e.preventDefault();
+    const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.domNode.closest('table'));
+    if (!this.domNode.parentNode || !this.domNode.parentNode.children) return;
+    const colIndex = Array.from(this.domNode.parentNode.children).indexOf(this.domNode);
+    const colGroup = tableContainer.colGroup();
+    const colBlot = colGroup && colGroup.children.at(colIndex);
+    if (this.dragging) {
+      if (this.draggingFromLeft) {
+        const previousCell = this.domNode.previousSibling;
+        if (previousCell) {
+          const newWidth = this.previousCellWidth + this.delta;
+          const previousColIndex = colIndex - 1;
+          const previousColBlot = colGroup && colGroup.children.at(previousColIndex);
+          if (previousColBlot) {
+            previousColBlot.format('width', newWidth);
+          }
+        }
+      } else {
+        const newWidth = this.initialWidth + this.delta;
+        colBlot.format('width', newWidth);
+      }
+
+      // clean up
+      this.initialClientX = 0;
+      this.currentClientX = 0;
+      this.delta = 0;
+      this.initialWidth = 0;
+      this.previousCellWidth = 0;
+      this.dragging = false;
+      this.draggingFromLeft = false;
+      document.body.style.cursor = 'default';
+      if (this.helpLine) {
+        document.body.removeChild(this.helpLine);
+        this.helpLine = null;
+      }
+      tableContainer.updateTableWidth();
+    }
+    document.removeEventListener('mousemove', this.handleDrag, false);
+    document.removeEventListener('mouseup', this.handleMouseUp, false);
+  };
+  handleMouseDown = e => {
+    const edgeType = this.isOnEdge(e);
+    if (!edgeType) return;
+    document.addEventListener('mousemove', this.handleDrag, false);
+    document.addEventListener('mouseup', this.handleMouseUp, false);
+    e.preventDefault();
+    this.dragging = true;
+    this.draggingFromLeft = edgeType === 'left';
+    this.initialClientX = e.clientX;
+    this.tableRect = this.domNode.closest('table').getBoundingClientRect();
+    this.cellRect = this.domNode.getBoundingClientRect();
+    this.initialWidth = this.cellRect.width;
+    if (this.draggingFromLeft) {
+      const previousCell = this.domNode.previousSibling;
+      if (previousCell) {
+        this.previousCellWidth = previousCell.getBoundingClientRect().width;
+      }
+    }
+    this.helpLine = document.createElement('div');
+    css(this.helpLine, {
+      position: 'fixed',
+      top: `${this.tableRect.top}px`,
+      left: `${this.draggingFromLeft ? this.cellRect.left - 1 : this.cellRect.left + this.cellRect.width - 1}px`,
+      zIndex: '100',
+      height: `${this.tableRect.height}px`,
+      width: '1px',
+      backgroundColor: '#f88539'
+    });
+    document.body.appendChild(this.helpLine);
+    document.body.style.cursor = 'ew-resize';
+  };
+  handleMouseMove = e => {
+    const edgeType = this.isOnEdge(e);
+    if (edgeType) {
+      this.domNode.style.cursor = 'ew-resize';
+    } else {
+      this.domNode.style.cursor = 'default';
+    }
+  };
+  addEventListeners() {
+    this.domNode.addEventListener('mousedown', this.handleMouseDown);
+    this.domNode.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('resize', this.updateTableWidth.bind(this));
+  }
+  updateTableWidth() {
+    const table = this.domNode.closest('table');
+    if (table) {
+      const colGroup = table.querySelector('colgroup');
+      if (colGroup) {
+        let totalWidth = 0;
+        colGroup.querySelectorAll('col').forEach(col => {
+          totalWidth += parseInt(col.style.width, 10);
+        });
+        table.style.width = `${totalWidth}px`;
+      }
+    }
+  }
+  isOnEdge(event) {
+    const rect = this.domNode.getBoundingClientRect();
+    const offset = 5;
+    if (event.clientX >= rect.right - offset && event.clientX <= rect.right + offset) {
+      return 'right';
+    } else if (event.clientX >= rect.left - offset && event.clientX <= rect.left + offset) {
+      return 'left';
+    }
+    return null;
+  }
   checkMerge() {
     if (super.checkMerge() && this.next.children.head != null) {
       const thisHead = this.children.head.formats()[this.children.head.statics.blotName];
@@ -859,7 +1012,7 @@ class TableContainer extends Container {
   }
   tableDestroy() {
     const quill = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.scroll.domNode.parentNode);
-    const tableModule = quill.getModule("better-table");
+    const tableModule = quill.getModule("table-plus");
     this.remove();
     tableModule.hideTableTools();
     quill.update((external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default()).sources.USER);
@@ -1101,14 +1254,14 @@ class TableContainer extends Container {
   }
 }
 TableContainer.blotName = "table-container";
-TableContainer.className = "quill-better-table";
+TableContainer.className = "quill-table-plus";
 TableContainer.tagName = "TABLE";
 class TableViewWrapper extends Container {
   constructor(scroll, domNode) {
     super(scroll, domNode);
     const quill = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(scroll.domNode.parentNode);
     domNode.addEventListener('scroll', e => {
-      const tableModule = quill.getModule('better-table');
+      const tableModule = quill.getModule('table-plus');
       if (tableModule.columnTool) {
         tableModule.columnTool.domNode.scrollLeft = e.target.scrollLeft;
       }
@@ -1122,7 +1275,7 @@ class TableViewWrapper extends Container {
   }
 }
 TableViewWrapper.blotName = "table-view";
-TableViewWrapper.className = "quill-better-table-wrapper";
+TableViewWrapper.className = "quill-table-plus-wrapper";
 TableViewWrapper.tagName = "DIV";
 TableViewWrapper.allowedChildren = [TableContainer];
 TableContainer.requiredContainer = TableViewWrapper;
@@ -1150,7 +1303,7 @@ function cellId() {
 
 
 
-const table_selection_PRIMARY_COLOR = '#0589f3';
+const table_selection_PRIMARY_COLOR = '#f88539';
 const LINE_POSITIONS = ['left', 'right', 'top', 'bottom'];
 const table_selection_ERROR_LIMIT = 2;
 class TableSelection {
@@ -1183,7 +1336,7 @@ class TableSelection {
     });
   }
   mouseDownHandler(e) {
-    if (e.button !== 0 || !e.target.closest(".quill-better-table")) return;
+    if (e.button !== 0 || !e.target.closest(".quill-table-plus")) return;
     this.quill.root.addEventListener('mousemove', mouseMoveHandler, false);
     this.quill.root.addEventListener('mouseup', mouseUpHandler, false);
     const self = this;
@@ -1195,7 +1348,7 @@ class TableSelection {
     this.selectedTds = this.computeSelectedTds();
     this.repositionHelpLines();
     function mouseMoveHandler(e) {
-      if (e.button !== 0 || !e.target.closest(".quill-better-table")) return;
+      if (e.button !== 0 || !e.target.closest(".quill-table-plus")) return;
       const endTd = e.target.closest('td[data-row]');
       const endTdRect = getRelativeRect(endTd.getBoundingClientRect(), self.quill.root.parentNode);
       self.boundary = computeBoundaryFromRects(startTdRect, endTdRect);
@@ -1316,6 +1469,38 @@ class TableSelection {
       });
     });
   }
+  equalizeColumnWidths() {
+    const selectedCells = this.selectedTds.map(td => td.domNode);
+    if (selectedCells.length === 0) return;
+    const selectedColumns = new Set();
+    selectedCells.forEach(cell => {
+      const colIndex = Array.from(cell.parentElement.children).indexOf(cell);
+      selectedColumns.add(colIndex);
+    });
+    let totalWidth = 0;
+    let columnCount = 0;
+    selectedColumns.forEach(index => {
+      const cell = selectedCells.find(cell => Array.from(cell.parentElement.children).indexOf(cell) === index);
+      if (cell) {
+        totalWidth += cell.clientWidth;
+        columnCount += 1;
+      }
+    });
+    const averageWidth = totalWidth / columnCount;
+    selectedColumns.forEach(colIndex => {
+      const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
+      const colBlot = tableContainer.colGroup().children.at(colIndex);
+      colBlot.format('width', averageWidth);
+      selectedCells.forEach(cell => {
+        if (Array.from(cell.parentElement.children).indexOf(cell) === colIndex) {
+          css(cell, {
+            'width': `${averageWidth}px`
+          });
+        }
+      });
+    });
+    this.quill.update((external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default()).sources.USER);
+  }
 }
 function computeBoundaryFromRects(startRect, endRect) {
   let x = Math.min(startRect.x, endRect.x, startRect.x + startRect.width - 1, endRect.x + endRect.width - 1);
@@ -1335,47 +1520,47 @@ function computeBoundaryFromRects(startRect, endRect) {
 }
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_1.svg
 // Module
-var code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M73.142857 336.64h526.628572v43.885714H73.142857zM73.142857 643.657143h526.628572v43.885714H73.142857zM336.457143 117.028571h43.885714v789.942858h-43.885714zM204.8 73.142857h614.4a131.657143 131.657143 0 0 1 131.657143 131.657143v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.84 131.84 0 0 1 204.8 73.142857z m0 43.885714a87.771429 87.771429 0 0 0-87.771429 87.771429v614.4a87.771429 87.771429 0 0 0 87.771429 87.771429h614.4a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM819.2 73.142857h-219.428571v877.714286h219.428571a131.657143 131.657143 0 0 0 131.657143-131.657143V204.8A131.84 131.84 0 0 0 819.2 73.142857z m44.068571 460.982857h-65.828571v65.828572H753.371429v-65.828572h-65.828572V490.057143h65.828572v-65.828572h44.068571v65.828572h65.828571z\"/></svg>";
+var code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M73.142857 336.64h526.628572v43.885714H73.142857zM73.142857 643.657143h526.628572v43.885714H73.142857zM336.457143 117.028571h43.885714v789.942858h-43.885714zM204.8 73.142857h614.4a131.657143 131.657143 0 0 1 131.657143 131.657143v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.84 131.84 0 0 1 204.8 73.142857z m0 43.885714a87.771429 87.771429 0 0 0-87.771429 87.771429v614.4a87.771429 87.771429 0 0 0 87.771429 87.771429h614.4a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM819.2 73.142857h-219.428571v877.714286h219.428571a131.657143 131.657143 0 0 0 131.657143-131.657143V204.8A131.84 131.84 0 0 0 819.2 73.142857z m44.068571 460.982857h-65.828571v65.828572H753.371429v-65.828572h-65.828572V490.057143h65.828572v-65.828572h44.068571v65.828572h65.828571z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_1 = (code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_2.svg
 // Module
-var icon_operation_2_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M380.342857 336.457143h526.811429v43.885714H380.342857z m0 307.2h526.811429v43.885714H380.342857zM643.657143 117.028571h43.885714v789.942858h-43.885714zM204.8 73.142857h614.582857A131.474286 131.474286 0 0 1 950.857143 204.8v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.657143 131.657143 0 0 1 204.8 73.142857z m0 43.885714a87.588571 87.588571 0 0 0-87.588571 87.771429v614.4a87.588571 87.588571 0 0 0 87.588571 87.771429h614.582857a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM204.8 73.142857A131.657143 131.657143 0 0 0 73.142857 204.8v614.4a131.657143 131.657143 0 0 0 131.657143 131.657143h219.428571V73.142857z m131.84 460.8h-65.828571v65.828572h-43.885715v-65.828572h-65.828571v-43.885714h65.828571v-65.828572h43.885715v65.828572h65.828571z\"/></svg>";
+var icon_operation_2_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M380.342857 336.457143h526.811429v43.885714H380.342857z m0 307.2h526.811429v43.885714H380.342857zM643.657143 117.028571h43.885714v789.942858h-43.885714zM204.8 73.142857h614.582857A131.474286 131.474286 0 0 1 950.857143 204.8v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.657143 131.657143 0 0 1 204.8 73.142857z m0 43.885714a87.588571 87.588571 0 0 0-87.588571 87.771429v614.4a87.588571 87.588571 0 0 0 87.588571 87.771429h614.582857a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM204.8 73.142857A131.657143 131.657143 0 0 0 73.142857 204.8v614.4a131.657143 131.657143 0 0 0 131.657143 131.657143h219.428571V73.142857z m131.84 460.8h-65.828571v65.828572h-43.885715v-65.828572h-65.828571v-43.885714h65.828571v-65.828572h43.885715v65.828572h65.828571z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_2 = (icon_operation_2_code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_3.svg
 // Module
-var icon_operation_3_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M73.142857 599.771429h877.714286v43.885714H73.142857zM336.457143 380.342857h43.885714v526.628572h-43.885714z m307.2 0h43.885714v526.628572h-43.885714zM204.8 73.142857h614.4a131.657143 131.657143 0 0 1 131.657143 131.657143v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.657143 131.657143 0 0 1 204.8 73.142857z m0 43.885714a87.771429 87.771429 0 0 0-87.771429 87.771429v614.4a87.588571 87.588571 0 0 0 87.771429 87.771429h614.4a87.588571 87.588571 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM819.2 73.142857H204.8A131.657143 131.657143 0 0 0 73.142857 204.8v219.428571h877.714286v-219.428571A131.657143 131.657143 0 0 0 819.2 73.142857z m-219.428571 197.485714h-65.828572v65.828572h-43.885714v-65.828572h-65.828572v-43.885714h65.828572V160.914286h43.885714v65.828571h65.828572z\"/></svg>";
+var icon_operation_3_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M73.142857 599.771429h877.714286v43.885714H73.142857zM336.457143 380.342857h43.885714v526.628572h-43.885714z m307.2 0h43.885714v526.628572h-43.885714zM204.8 73.142857h614.4a131.657143 131.657143 0 0 1 131.657143 131.657143v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.657143 131.657143 0 0 1 204.8 73.142857z m0 43.885714a87.771429 87.771429 0 0 0-87.771429 87.771429v614.4a87.588571 87.588571 0 0 0 87.771429 87.771429h614.4a87.588571 87.588571 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM819.2 73.142857H204.8A131.657143 131.657143 0 0 0 73.142857 204.8v219.428571h877.714286v-219.428571A131.657143 131.657143 0 0 0 819.2 73.142857z m-219.428571 197.485714h-65.828572v65.828572h-43.885714v-65.828572h-65.828572v-43.885714h65.828572V160.914286h43.885714v65.828571h65.828572z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_3 = (icon_operation_3_code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_4.svg
 // Module
-var icon_operation_4_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M204.8 73.142857h614.4a131.657143 131.657143 0 0 1 131.657143 131.657143v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.84 131.84 0 0 1 204.8 73.142857z m0 43.885714a87.771429 87.771429 0 0 0-87.771429 87.771429v614.4a87.771429 87.771429 0 0 0 87.771429 87.771429h614.4a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM73.142857 336.457143h877.714286v44.068571H73.142857zM336.64 117.028571h43.885714v526.628572h-43.885714z m307.017143 0h44.068571v526.628572H643.657143zM73.142857 599.771429v219.428571a131.657143 131.657143 0 0 0 131.657143 131.657143h614.4a131.657143 131.657143 0 0 0 131.657143-131.657143v-219.428571z m526.628572 197.485714h-65.645715v65.828571H490.057143v-65.828571h-65.828572v-43.885714h65.828572v-65.828572h44.068571v65.828572h65.645715z\"/></svg>";
+var icon_operation_4_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M204.8 73.142857h614.4a131.657143 131.657143 0 0 1 131.657143 131.657143v614.4a131.657143 131.657143 0 0 1-131.657143 131.657143H204.8A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.84 131.84 0 0 1 204.8 73.142857z m0 43.885714a87.771429 87.771429 0 0 0-87.771429 87.771429v614.4a87.771429 87.771429 0 0 0 87.771429 87.771429h614.4a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM73.142857 336.457143h877.714286v44.068571H73.142857zM336.64 117.028571h43.885714v526.628572h-43.885714z m307.017143 0h44.068571v526.628572H643.657143zM73.142857 599.771429v219.428571a131.657143 131.657143 0 0 0 131.657143 131.657143h614.4a131.657143 131.657143 0 0 0 131.657143-131.657143v-219.428571z m526.628572 197.485714h-65.645715v65.828571H490.057143v-65.828571h-65.828572v-43.885714h65.828572v-65.828572h44.068571v65.828572h65.645715z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_4 = (icon_operation_4_code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_5.svg
 // Module
-var icon_operation_5_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M925.99596 99.038384c-25.470707-25.6-60.121212-39.822222-96.323233-39.822222H194.19798c-36.072727 0-70.723232 14.351515-96.323233 39.822222-25.6 25.6-39.822222 60.121212-39.822222 96.323232v635.474748c0 36.072727 14.351515 70.723232 39.822222 96.323232C123.474747 952.759596 158.125253 967.111111 194.19798 967.111111h635.474747c36.072727 0 70.723232-14.351515 96.323233-39.951515 25.6-25.6 39.951515-60.121212 39.951515-96.323232V195.361616c0-36.072727-14.351515-70.723232-39.951515-96.323232z m-277.850505 5.559596v226.909091H375.725253V104.59798h272.420202zM103.434343 195.361616c0-24.048485 9.567677-47.191919 26.634344-64.129293 17.066667-17.066667 40.080808-26.634343 64.129293-26.634343h136.145454v226.909091H103.434343V195.361616z m90.763637 726.367677c-24.048485 0-47.191919-9.567677-64.129293-26.634344-17.066667-17.066667-26.634343-40.080808-26.634344-64.129292V649.309091h226.909091v272.420202H194.19798z m181.527273 0V649.309091h272.290909v272.420202H375.725253z m544.711111-90.892929c0 24.048485-9.567677 47.191919-26.634344 64.129293-17.066667 17.066667-40.080808 26.634343-64.129293 26.634343H693.527273V649.309091h226.909091v181.527273zM693.527273 331.507071V104.59798h136.145454c24.048485 0 47.191919 9.567677 64.129293 26.634343 17.066667 17.066667 26.634343 40.080808 26.634344 64.129293v136.145455H693.527273z\"/></svg>";
+var icon_operation_5_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M925.99596 99.038384c-25.470707-25.6-60.121212-39.822222-96.323233-39.822222H194.19798c-36.072727 0-70.723232 14.351515-96.323233 39.822222-25.6 25.6-39.822222 60.121212-39.822222 96.323232v635.474748c0 36.072727 14.351515 70.723232 39.822222 96.323232C123.474747 952.759596 158.125253 967.111111 194.19798 967.111111h635.474747c36.072727 0 70.723232-14.351515 96.323233-39.951515 25.6-25.6 39.951515-60.121212 39.951515-96.323232V195.361616c0-36.072727-14.351515-70.723232-39.951515-96.323232z m-277.850505 5.559596v226.909091H375.725253V104.59798h272.420202zM103.434343 195.361616c0-24.048485 9.567677-47.191919 26.634344-64.129293 17.066667-17.066667 40.080808-26.634343 64.129293-26.634343h136.145454v226.909091H103.434343V195.361616z m90.763637 726.367677c-24.048485 0-47.191919-9.567677-64.129293-26.634344-17.066667-17.066667-26.634343-40.080808-26.634344-64.129292V649.309091h226.909091v272.420202H194.19798z m181.527273 0V649.309091h272.290909v272.420202H375.725253z m544.711111-90.892929c0 24.048485-9.567677 47.191919-26.634344 64.129293-17.066667 17.066667-40.080808 26.634343-64.129293 26.634343H693.527273V649.309091h226.909091v181.527273zM693.527273 331.507071V104.59798h136.145454c24.048485 0 47.191919 9.567677 64.129293 26.634343 17.066667 17.066667 26.634343 40.080808 26.634344 64.129293v136.145455H693.527273z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_5 = (icon_operation_5_code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_6.svg
 // Module
-var icon_operation_6_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M336.457143 73.142857h43.885714v877.714286h-43.885714z m307.382857 0h43.702857v877.714286h-43.702857z m-438.857143 0h614.4A131.657143 131.657143 0 0 1 950.857143 204.8v614.4a131.474286 131.474286 0 0 1-131.474286 131.657143h-614.4A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.84 131.84 0 0 1 204.982857 73.142857z m0 43.885714a87.588571 87.588571 0 0 0-87.771428 87.771429v614.4a87.588571 87.588571 0 0 0 87.771428 87.771429h614.4a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM73.142857 336.457143h877.714286v307.2H73.142857z m292.571429 43.885714v219.428572h292.571428v-219.428572z\"/></svg>";
+var icon_operation_6_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M336.457143 73.142857h43.885714v877.714286h-43.885714z m307.382857 0h43.702857v877.714286h-43.702857z m-438.857143 0h614.4A131.657143 131.657143 0 0 1 950.857143 204.8v614.4a131.474286 131.474286 0 0 1-131.474286 131.657143h-614.4A131.657143 131.657143 0 0 1 73.142857 819.2V204.8A131.84 131.84 0 0 1 204.982857 73.142857z m0 43.885714a87.588571 87.588571 0 0 0-87.771428 87.771429v614.4a87.588571 87.588571 0 0 0 87.771428 87.771429h614.4a87.771429 87.771429 0 0 0 87.771429-87.771429V204.8a87.771429 87.771429 0 0 0-87.771429-87.771429zM73.142857 336.457143h877.714286v307.2H73.142857z m292.571429 43.885714v219.428572h292.571428v-219.428572z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_6 = (icon_operation_6_code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_7.svg
 // Module
-var icon_operation_7_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M925.996 99.038c-25.47-25.6-60.121-39.822-96.323-39.822H194.198c-75.12 0.13-136.016 61.026-136.145 136.146v635.345c0 36.073 14.351 70.723 39.822 96.323 25.6 25.73 60.25 40.081 96.323 40.081h635.475c36.072 0 70.723-14.351 96.323-39.951 25.6-25.6 39.951-60.122 39.951-96.324V195.362c0-36.073-14.351-70.724-39.951-96.324z m-365.77 494.287L512 545.228l-48.226 48.097-32.194-31.935 48.355-48.226-48.226-48.097 32.194-32.194L512 480.97l48.097-48.097 32.194 32.194-48.097 48.097 48.226 48.226-32.194 31.935zM103.434 195.362c0-24.049 9.568-47.192 26.635-64.13 17.066-17.066 40.08-26.634 64.129-26.634h136.145v226.91H103.434V195.361z m0 181.656h226.91V649.31h-226.91V377.02z m90.764 544.84c-24.049 0-47.192-9.567-64.13-26.634-17.066-17.066-26.634-40.08-26.634-64.258V694.69h226.91v227.168H194.197z m726.238-90.763c0 24.048-9.438 47.192-26.505 64.259-17.066 17.066-40.21 26.634-64.258 26.505H693.527V694.69h226.91v136.404z m0-181.786H693.527V377.02h226.91v272.29zM693.527 331.507V104.598h136.146c24.048 0 47.192 9.438 64.258 26.505 17.067 17.067 26.635 40.21 26.505 64.259v136.145H693.527z\"/></svg>";
+var icon_operation_7_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M925.996 99.038c-25.47-25.6-60.121-39.822-96.323-39.822H194.198c-75.12 0.13-136.016 61.026-136.145 136.146v635.345c0 36.073 14.351 70.723 39.822 96.323 25.6 25.73 60.25 40.081 96.323 40.081h635.475c36.072 0 70.723-14.351 96.323-39.951 25.6-25.6 39.951-60.122 39.951-96.324V195.362c0-36.073-14.351-70.724-39.951-96.324z m-365.77 494.287L512 545.228l-48.226 48.097-32.194-31.935 48.355-48.226-48.226-48.097 32.194-32.194L512 480.97l48.097-48.097 32.194 32.194-48.097 48.097 48.226 48.226-32.194 31.935zM103.434 195.362c0-24.049 9.568-47.192 26.635-64.13 17.066-17.066 40.08-26.634 64.129-26.634h136.145v226.91H103.434V195.361z m0 181.656h226.91V649.31h-226.91V377.02z m90.764 544.84c-24.049 0-47.192-9.567-64.13-26.634-17.066-17.066-26.634-40.08-26.634-64.258V694.69h226.91v227.168H194.197z m726.238-90.763c0 24.048-9.438 47.192-26.505 64.259-17.066 17.066-40.21 26.634-64.258 26.505H693.527V694.69h226.91v136.404z m0-181.786H693.527V377.02h226.91v272.29zM693.527 331.507V104.598h136.146c24.048 0 47.192 9.438 64.258 26.505 17.067 17.067 26.635 40.21 26.505 64.259v136.145H693.527z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_7 = (icon_operation_7_code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_8.svg
 // Module
-var icon_operation_8_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M925.99596 99.038384c-25.470707-25.6-60.121212-39.822222-96.323233-39.822222H194.19798c-36.072727 0-70.723232 14.351515-96.323233 39.822222-25.6 25.6-39.822222 60.121212-39.822222 96.323232v635.474748c0 36.072727 14.351515 70.723232 39.822222 96.323232C123.474747 952.759596 158.125253 967.111111 194.19798 967.111111h635.474747c36.072727 0 70.723232-14.351515 96.323233-39.951515 25.6-25.6 39.951515-60.121212 39.951515-96.323232V195.361616c0-36.072727-14.351515-70.723232-39.951515-96.323232z m-550.270707 5.559596h272.290909v227.167677H375.725253V104.59798z m56.242424 360.468687l31.935353-32.19394 48.09697 48.226263 48.09697-48.226263 32.193939 32.19394-48.09697 48.096969 48.226263 48.226263-32.193939 31.935354-48.226263-48.09697-48.226263 48.09697-31.935353-31.935354 48.226262-48.226263-48.096969-48.096969zM103.434343 195.361616c0-24.048485 9.567677-47.191919 26.634344-64.129293 17.066667-17.066667 40.080808-26.634343 64.129293-26.634343h136.145454v227.167677H103.434343V195.361616z m817.002021 635.733333c0 24.048485-9.567677 47.191919-26.634344 64.258586-17.066667 17.066667-40.080808 26.634343-64.129293 26.634344H194.19798c-24.048485 0-47.191919-9.567677-64.258586-26.634344C112.872727 878.157576 103.434343 855.014141 103.434343 830.836364V694.690909h226.909091v226.909091h45.381819V694.690909h272.290909v226.909091h45.381818V694.690909h226.909091v136.40404z m0-499.329292H693.527273V104.59798h136.145454c24.048485 0 47.191919 9.567677 64.129293 26.634343 17.066667 17.066667 26.634343 40.080808 26.634344 64.129293v136.404041z\"/></svg>";
+var icon_operation_8_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M925.99596 99.038384c-25.470707-25.6-60.121212-39.822222-96.323233-39.822222H194.19798c-36.072727 0-70.723232 14.351515-96.323233 39.822222-25.6 25.6-39.822222 60.121212-39.822222 96.323232v635.474748c0 36.072727 14.351515 70.723232 39.822222 96.323232C123.474747 952.759596 158.125253 967.111111 194.19798 967.111111h635.474747c36.072727 0 70.723232-14.351515 96.323233-39.951515 25.6-25.6 39.951515-60.121212 39.951515-96.323232V195.361616c0-36.072727-14.351515-70.723232-39.951515-96.323232z m-550.270707 5.559596h272.290909v227.167677H375.725253V104.59798z m56.242424 360.468687l31.935353-32.19394 48.09697 48.226263 48.09697-48.226263 32.193939 32.19394-48.09697 48.096969 48.226263 48.226263-32.193939 31.935354-48.226263-48.09697-48.226263 48.09697-31.935353-31.935354 48.226262-48.226263-48.096969-48.096969zM103.434343 195.361616c0-24.048485 9.567677-47.191919 26.634344-64.129293 17.066667-17.066667 40.080808-26.634343 64.129293-26.634343h136.145454v227.167677H103.434343V195.361616z m817.002021 635.733333c0 24.048485-9.567677 47.191919-26.634344 64.258586-17.066667 17.066667-40.080808 26.634343-64.129293 26.634344H194.19798c-24.048485 0-47.191919-9.567677-64.258586-26.634344C112.872727 878.157576 103.434343 855.014141 103.434343 830.836364V694.690909h226.909091v226.909091h45.381819V694.690909h272.290909v226.909091h45.381818V694.690909h226.909091v136.40404z m0-499.329292H693.527273V104.59798h136.145454c24.048485 0 47.191919 9.567677 64.129293 26.634343 17.066667 17.066667 26.634343 40.080808 26.634344 64.129293v136.404041z"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_8 = (icon_operation_8_code);
 ;// CONCATENATED MODULE: ./src/assets/icons/icon_operation_9.svg
 // Module
-var icon_operation_9_code = "<?xml version=\"1.0\" standalone=\"no\"?><!DOCTYPE svg PUBLIC \"-//W3C//DTD SVG 1.1//EN\" \"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd\"><svg class=\"icon\" width=\"20px\" height=\"20.00px\" viewBox=\"0 0 1024 1024\" version=\"1.1\" xmlns=\"http://www.w3.org/2000/svg\"><path fill=\"#595959\" d=\"M764.42168889 830.5152c0 30.23530667-24.61013333 54.84430222-54.84316444 54.84430222H314.42147555c-30.23416889 0-54.84316445-24.61013333-54.84316444-54.84430222V248.32796445h504.84337778v582.18723555zM369.26577778 149.89084445c0-6.32832 4.92202667-11.25034667 11.25034667-11.25034667H644.18702222c6.32832 0 11.25034667 4.92202667 11.25034667 11.25034667v33.04675555H369.26577778V149.89084445z m559.68768 33.04675555H720.82773333V149.89084445c0-42.1888-34.45191111-76.64071111-76.64071111-76.64071112H380.51612445c-42.1888 0-76.64071111 34.45191111-76.64071112 76.64071112v33.04675555h-208.82773333c-18.28181333 0-33.04789333 14.76608-33.04789333 33.04675555s14.76608 33.04675555 33.04675555 33.04675556h98.43825778v581.48408889c0 66.79779555 54.14001778 120.93781333 120.93667555 120.93781333h395.1570489c66.79665778 0 120.93667555-54.14001778 120.93667555-120.93781333V248.32796445h98.43825778c18.28067555 0 33.04675555-14.76494222 33.04675555-33.04675556s-14.76608-32.34360889-33.04675555-32.34360889zM512 786.21923555c18.28181333 0 33.04675555-14.76608 33.04675555-33.04789333v-351.56195555c0-18.28181333-14.76494222-33.04675555-33.04675555-33.04675556s-33.04675555 14.76494222-33.04675555 33.04675556v351.56195555c0 18.28181333 14.76494222 33.04789333 33.04675555 33.04789333m-153.98456889 0c18.28181333 0 33.04675555-14.76608 33.04675556-33.04789333v-351.56195555c0-18.28181333-14.76494222-33.04675555-33.04675556-33.04675556s-33.04675555 14.76494222-33.04675556 33.04675556v351.56195555c0.70314667 18.28181333 15.46922667 33.04789333 33.04675556 33.04789333m307.96913778 0c18.28067555 0 33.04675555-14.76608 33.04675556-33.04789333v-351.56195555c0-18.28181333-14.76608-33.04675555-33.04675556-33.04675556s-33.04675555 14.76494222-33.04675556 33.04675556v351.56195555c0 18.28181333 14.76494222 33.04789333 33.04675556 33.04789333\"/></svg>";
+var icon_operation_9_code = `<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg class="icon" width="20px" height="20.00px" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg"><path fill="#595959" d="M764.42168889 830.5152c0 30.23530667-24.61013333 54.84430222-54.84316444 54.84430222H314.42147555c-30.23416889 0-54.84316445-24.61013333-54.84316444-54.84430222V248.32796445h504.84337778v582.18723555zM369.26577778 149.89084445c0-6.32832 4.92202667-11.25034667 11.25034667-11.25034667H644.18702222c6.32832 0 11.25034667 4.92202667 11.25034667 11.25034667v33.04675555H369.26577778V149.89084445z m559.68768 33.04675555H720.82773333V149.89084445c0-42.1888-34.45191111-76.64071111-76.64071111-76.64071112H380.51612445c-42.1888 0-76.64071111 34.45191111-76.64071112 76.64071112v33.04675555h-208.82773333c-18.28181333 0-33.04789333 14.76608-33.04789333 33.04675555s14.76608 33.04675555 33.04675555 33.04675556h98.43825778v581.48408889c0 66.79779555 54.14001778 120.93781333 120.93667555 120.93781333h395.1570489c66.79665778 0 120.93667555-54.14001778 120.93667555-120.93781333V248.32796445h98.43825778c18.28067555 0 33.04675555-14.76494222 33.04675555-33.04675556s-14.76608-32.34360889-33.04675555-32.34360889zM512 786.21923555c18.28181333 0 33.04675555-14.76608 33.04675555-33.04789333v-351.56195555c0-18.28181333-14.76494222-33.04675555-33.04675555-33.04675556s-33.04675555 14.76494222-33.04675555 33.04675556v351.56195555c0 18.28181333 14.76494222 33.04789333 33.04675555 33.04789333m-153.98456889 0c18.28181333 0 33.04675555-14.76608 33.04675556-33.04789333v-351.56195555c0-18.28181333-14.76494222-33.04675555-33.04675556-33.04675556s-33.04675555 14.76494222-33.04675556 33.04675556v351.56195555c0.70314667 18.28181333 15.46922667 33.04789333 33.04675556 33.04789333m307.96913778 0c18.28067555 0 33.04675555-14.76608 33.04675556-33.04789333v-351.56195555c0-18.28181333-14.76608-33.04675555-33.04675556-33.04675556s-33.04675555 14.76494222-33.04675556 33.04675556v351.56195555c0 18.28181333 14.76494222 33.04789333 33.04675556 33.04789333"/></svg>`;
 // Exports
 /* harmony default export */ const icon_operation_9 = (icon_operation_9_code);
 ;// CONCATENATED MODULE: ./src/modules/table-operation-menu.js
@@ -1399,7 +1584,7 @@ const DEFAULT_CELL_COLORS = ['white', 'red', 'yellow', 'blue'];
 const DEFAULT_COLOR_SUBTITLE = 'Background Colors';
 const MENU_ITEMS_DEFAULT = {
   insertColumnRight: {
-    text: 'Insert column right',
+    text: '오른쪽에 열 삽입',
     iconSrc: icon_operation_1,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1414,7 +1599,7 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   insertColumnLeft: {
-    text: 'Insert column left',
+    text: '왼쪽에 열 삽입',
     iconSrc: icon_operation_2,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1429,7 +1614,7 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   insertRowUp: {
-    text: 'Insert row up',
+    text: '위에 행 삽입',
     iconSrc: icon_operation_3,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1440,7 +1625,7 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   insertRowDown: {
-    text: 'Insert row down',
+    text: '아래에 행 삽입',
     iconSrc: icon_operation_4,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1451,7 +1636,7 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   mergeCells: {
-    text: 'Merge selected cells',
+    text: '셀 병합',
     iconSrc: icon_operation_5,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1478,7 +1663,7 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   unmergeCells: {
-    text: 'Unmerge cells',
+    text: '셀 분리',
     iconSrc: icon_operation_6,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1488,7 +1673,7 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   deleteColumn: {
-    text: 'Delete selected columns',
+    text: '선택한 열 삭제',
     iconSrc: icon_operation_7,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1504,7 +1689,7 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   deleteRow: {
-    text: 'Delete selected rows',
+    text: '선택한 행 삭제',
     iconSrc: icon_operation_8,
     handler() {
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
@@ -1514,26 +1699,36 @@ const MENU_ITEMS_DEFAULT = {
     }
   },
   deleteTable: {
-    text: 'Delete table',
+    text: '테이블 삭제',
     iconSrc: icon_operation_9,
     handler() {
-      const betterTableModule = this.quill.getModule('better-table');
+      const quillTableModule = this.quill.getModule('table-plus');
       const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
-      betterTableModule.hideTableTools();
+      quillTableModule.hideTableTools();
       tableContainer.remove();
+      this.quill.update((external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default()).sources.USER);
+    }
+  },
+  equalizeColumns: {
+    text: '열 너비를 같게',
+    iconSrc: icon_operation_6,
+    handler() {
+      const tableContainer = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().find(this.table);
+      this.tableSelection.equalizeColumnWidths();
+      this.tableColumnTool.updateToolCells();
       this.quill.update((external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default()).sources.USER);
     }
   }
 };
 class TableOperationMenu {
   constructor(params, quill, options) {
-    const betterTableModule = quill.getModule('better-table');
-    this.tableSelection = betterTableModule.tableSelection;
+    const quillTableModule = quill.getModule('table-plus');
+    this.tableSelection = quillTableModule.tableSelection;
     this.table = params.table;
     this.quill = quill;
     this.options = options;
     this.menuItems = Object.assign({}, MENU_ITEMS_DEFAULT, options.items);
-    this.tableColumnTool = betterTableModule.columnTool;
+    this.tableColumnTool = quillTableModule.columnTool;
     this.boundary = this.tableSelection.boundary;
     this.selectedTds = this.tableSelection.selectedTds;
     this.destroyHandler = this.destroy.bind(this);
@@ -1860,7 +2055,7 @@ function matchTable(node, delta, scroll) {
     }, new Delta());
   }
 }
-;// CONCATENATED MODULE: ./src/quill-better-table.js
+;// CONCATENATED MODULE: ./src/quill-table-plus.js
 
 
 
@@ -1870,9 +2065,9 @@ function matchTable(node, delta, scroll) {
 
 
 const Module = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default()["import"]('core/module');
-const quill_better_table_Delta = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default()["import"]('delta');
+const quill_table_plus_Delta = external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default()["import"]('delta');
 
-class BetterTable extends Module {
+class QuillTablePlus extends Module {
   static register() {
     external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().register(TableCol, true);
     external_commonjs_quill_commonjs2_quill_amd_quill_root_Quill_default().register(TableColGroup, true);
@@ -1889,13 +2084,13 @@ class BetterTable extends Module {
   constructor(quill, options) {
     super(quill, options);
 
-    // handle click on quill-better-table
+    // handle click on quill-table-plus
     this.quill.root.addEventListener('click', evt => {
       // bugfix: evt.path is undefined in Safari, FF, Micro Edge
       const path = getEventComposedPath(evt);
       if (!path || path.length <= 0) return;
       const tableNode = path.filter(node => {
-        return node.tagName && node.tagName.toUpperCase() === 'TABLE' && node.classList.contains('quill-better-table');
+        return node.tagName && node.tagName.toUpperCase() === 'TABLE' && node.classList.contains('quill-table-plus');
       })[0];
       if (tableNode) {
         // current table clicked
@@ -1909,7 +2104,7 @@ class BetterTable extends Module {
       }
     }, false);
 
-    // handle right click on quill-better-table
+    // handle right click on quill-table-plus
     this.quill.root.addEventListener('contextmenu', evt => {
       if (!this.table) return true;
       evt.preventDefault();
@@ -1918,7 +2113,7 @@ class BetterTable extends Module {
       const path = getEventComposedPath(evt);
       if (!path || path.length <= 0) return;
       const tableNode = path.filter(node => {
-        return node.tagName && node.tagName.toUpperCase() === 'TABLE' && node.classList.contains('quill-better-table');
+        return node.tagName && node.tagName.toUpperCase() === 'TABLE' && node.classList.contains('quill-table-plus');
       })[0];
       const rowNode = path.filter(node => {
         return node.tagName && node.tagName.toUpperCase() === 'TR' && node.getAttribute('data-row');
@@ -1964,7 +2159,7 @@ class BetterTable extends Module {
     let thisBinding = quill.keyboard.bindings['Backspace'].pop();
     quill.keyboard.bindings['Backspace'].splice(0, 1, thisBinding);
 
-    // add Matchers to match and render quill-better-table for initialization
+    // add Matchers to match and render quill-table-plus for initialization
     // or pasting
     quill.clipboard.addMatcher('td', matchTableCell);
     quill.clipboard.addMatcher('th', matchTableHeader);
@@ -1992,7 +2187,7 @@ class BetterTable extends Module {
     const range = this.quill.getSelection(true);
     if (range == null) return;
     let currentBlot = this.quill.getLeaf(range.index)[0];
-    let delta = new quill_better_table_Delta().retain(range.index);
+    let delta = new quill_table_plus_Delta().retain(range.index);
     if (isInTableCell(currentBlot)) {
       console.warn(`Can not insert table into a table cell.`);
       return;
@@ -2036,7 +2231,7 @@ class BetterTable extends Module {
     this.table = null;
   }
 }
-BetterTable.keyboardBindings = {
+QuillTablePlus.keyboardBindings = {
   'table-cell-line backspace': {
     key: 'Backspace',
     format: ['table-cell-line'],
@@ -2169,7 +2364,7 @@ function isTableCell(blot) {
 function isInTableCell(current) {
   return current && current.parent ? isTableCell(current.parent) ? true : isInTableCell(current.parent) : false;
 }
-/* harmony default export */ const quill_better_table = (BetterTable);
+/* harmony default export */ const quill_table_plus = (QuillTablePlus);
 
 /***/ }),
 
@@ -2459,7 +2654,7 @@ module.exports = function (urlString) {
 
 /***/ }),
 
-/***/ 603:
+/***/ 999:
 /***/ ((module, __unused_webpack___webpack_exports__, __webpack_require__) => {
 
 // extracted by mini-css-extract-plugin
@@ -2467,7 +2662,7 @@ module.exports = function (urlString) {
     if(true) {
       (function() {
         var localsJsonString = undefined;
-        // 1714348584382
+        // 1725324975658
         var cssReload = __webpack_require__(140)(module.id, {});
         // only invalidate when locals change
         if (
@@ -2590,7 +2785,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 	
 /******/ 	/* webpack/runtime/getFullHash */
 /******/ 	(() => {
-/******/ 		__webpack_require__.h = () => ("9f9cfb4bf918febee5af")
+/******/ 		__webpack_require__.h = () => ("3d179303bc993cd7b39a")
 /******/ 	})();
 /******/ 	
 /******/ 	/* webpack/runtime/global */
@@ -2613,7 +2808,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 	/* webpack/runtime/load script */
 /******/ 	(() => {
 /******/ 		var inProgress = {};
-/******/ 		var dataWebpackPrefix = "quillBetterTable:";
+/******/ 		var dataWebpackPrefix = "quillTablePlus:";
 /******/ 		// loadScript function to load a script via script tag
 /******/ 		__webpack_require__.l = (url, done, key, chunkId) => {
 /******/ 			if(inProgress[url]) { inProgress[url].push(done); return; }
@@ -2843,7 +3038,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 					if (idx >= 0) registeredStatusHandlers.splice(idx, 1);
 /******/ 				},
 /******/ 		
-/******/ 				//inherit from previous dispose call
+/******/ 				// inherit from previous dispose call
 /******/ 				data: currentModuleData[moduleId]
 /******/ 			};
 /******/ 			currentChildModule = undefined;
@@ -2935,11 +3130,10 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 							return waitForBlockingPromises(function () {
 /******/ 								if (applyOnUpdate) {
 /******/ 									return internalApply(applyOnUpdate);
-/******/ 								} else {
-/******/ 									return setStatus("ready").then(function () {
-/******/ 										return updatedModules;
-/******/ 									});
 /******/ 								}
+/******/ 								return setStatus("ready").then(function () {
+/******/ 									return updatedModules;
+/******/ 								});
 /******/ 							});
 /******/ 						});
 /******/ 					});
@@ -3054,7 +3248,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 		if (__webpack_require__.g.importScripts) scriptUrl = __webpack_require__.g.location + "";
 /******/ 		var document = __webpack_require__.g.document;
 /******/ 		if (!scriptUrl && document) {
-/******/ 			if (document.currentScript)
+/******/ 			if (document.currentScript && document.currentScript.tagName.toUpperCase() === 'SCRIPT')
 /******/ 				scriptUrl = document.currentScript.src;
 /******/ 			if (!scriptUrl) {
 /******/ 				var scripts = document.getElementsByTagName("script");
@@ -3181,8 +3375,8 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 		// [resolve, reject, Promise] = chunk loading, 0 = chunk loaded
 /******/ 		var installedChunks = __webpack_require__.hmrS_jsonp = __webpack_require__.hmrS_jsonp || {
 /******/ 			364: 0,
-/******/ 			757: 0,
-/******/ 			634: 0
+/******/ 			237: 0,
+/******/ 			370: 0
 /******/ 		};
 /******/ 		
 /******/ 		// no chunk on demand loading
@@ -3217,7 +3411,7 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 			});
 /******/ 		}
 /******/ 		
-/******/ 		self["webpackHotUpdatequillBetterTable"] = (chunkId, moreModules, runtime) => {
+/******/ 		self["webpackHotUpdatequillTablePlus"] = (chunkId, moreModules, runtime) => {
 /******/ 			for(var moduleId in moreModules) {
 /******/ 				if(__webpack_require__.o(moreModules, moduleId)) {
 /******/ 					currentUpdate[moduleId] = moreModules[moduleId];
@@ -3331,15 +3525,12 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 				if (__webpack_require__.o(currentUpdate, moduleId)) {
 /******/ 					var newModuleFactory = currentUpdate[moduleId];
 /******/ 					/** @type {TODO} */
-/******/ 					var result;
-/******/ 					if (newModuleFactory) {
-/******/ 						result = getAffectedModuleEffects(moduleId);
-/******/ 					} else {
-/******/ 						result = {
-/******/ 							type: "disposed",
-/******/ 							moduleId: moduleId
-/******/ 						};
-/******/ 					}
+/******/ 					var result = newModuleFactory
+/******/ 						? getAffectedModuleEffects(moduleId)
+/******/ 						: {
+/******/ 								type: "disposed",
+/******/ 								moduleId: moduleId
+/******/ 							};
 /******/ 					/** @type {Error|false} */
 /******/ 					var abortError = false;
 /******/ 					var doApply = false;
@@ -3590,17 +3781,17 @@ module.exports = __WEBPACK_EXTERNAL_MODULE__912__;
 /******/ 										moduleId: moduleId,
 /******/ 										module: __webpack_require__.c[moduleId]
 /******/ 									});
-/******/ 								} catch (err2) {
+/******/ 								} catch (err1) {
 /******/ 									if (options.onErrored) {
 /******/ 										options.onErrored({
 /******/ 											type: "self-accept-error-handler-errored",
 /******/ 											moduleId: moduleId,
-/******/ 											error: err2,
+/******/ 											error: err1,
 /******/ 											originalError: err
 /******/ 										});
 /******/ 									}
 /******/ 									if (!options.ignoreErrored) {
-/******/ 										reportError(err2);
+/******/ 										reportError(err1);
 /******/ 										reportError(err);
 /******/ 									}
 /******/ 								}
