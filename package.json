@@ -3,8 +3,8 @@
     "npm": ">=10.5.0",
     "node": ">=18.20.0"
   },
-  "name": "@YoungeuiHong/quill-table-plus-tmaxai-catholic",
-  "version": "0.0.6",
+  "name": "quill-table-plus",
+  "version": "0.0.1",
   "description": "A Quill editor extension that adds powerful table editing capabilities, enabling users to create, modify, and manage tables with ease.",
   "main": "dist/quill-table-plus.js",
   "scripts": {
