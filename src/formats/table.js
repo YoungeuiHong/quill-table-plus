@@ -544,10 +544,21 @@ class TableColGroup extends Container {}
 TableColGroup.blotName = "table-col-group"
 TableColGroup.tagName = "colgroup"
 
+
+
 class TableContainer extends Container {
+  static hasCaption = false;
+
   static create() {
-    let node = super.create()
-    return node
+    const node = super.create();
+
+    if (!TableContainer.hasCaption) {
+      const caption = TableCaption.create({ caption: 'Default Caption' });
+      node.appendChild(caption);
+      TableContainer.hasCaption = true;
+    }
+
+    return node;
   }
 
   constructor (scroll, domNode) {
@@ -571,8 +582,15 @@ class TableContainer extends Container {
     return this.rows().map(row => row.children.at(column))
   }
 
-  colGroup () {
-    return this.children.head
+  colGroup() {
+    let currentBlot = this.children.head;
+    while (currentBlot) {
+      if (currentBlot.statics.blotName === 'table-col-group') {
+        return currentBlot;
+      }
+      currentBlot = currentBlot.next;
+    }
+    return null;
   }
 
   deleteColumns(compareRect, delIndexes = [], editorWrapper) {
@@ -1036,6 +1054,31 @@ TableContainer.blotName = "table-container"
 TableContainer.className = "quill-table-plus"
 TableContainer.tagName = "TABLE"
 
+class TableCaption extends Block {
+  static create(value) {
+    const node = super.create();
+    node.innerText = value.caption || '테이블 캡션을 입력해주세요.';
+    return node;
+  }
+
+  static formats(domNode) {
+    return {
+      caption: domNode.innerText,
+    };
+  }
+
+  format(name, value) {
+    if (name === 'caption') {
+      this.domNode.innerText = value || '테이블 캡션을 입력해주세요.';
+    } else {
+      super.format(name, value);
+    }
+  }
+}
+TableCaption.blotName = 'table-caption';
+TableCaption.className = 'table-caption';
+TableCaption.tagName = 'caption';
+
 class TableViewWrapper extends Container {
   constructor (scroll, domNode) {
     super(scroll, domNode)
@@ -1064,8 +1107,9 @@ TableViewWrapper.tagName = "DIV"
 TableViewWrapper.allowedChildren = [TableContainer]
 TableContainer.requiredContainer = TableViewWrapper
 
-TableContainer.allowedChildren = [TableBody, TableColGroup]
+TableContainer.allowedChildren = [TableBody, TableColGroup, TableCaption]
 TableBody.requiredContainer = TableContainer
+TableCaption.requiredContainer = TableContainer
 
 TableBody.allowedChildren = [TableRow]
 TableRow.requiredContainer = TableBody
@@ -1105,6 +1149,7 @@ export {
   TableBody,
   TableContainer,
   TableViewWrapper,
+  TableCaption,
 
   // identity getters
   rowId,

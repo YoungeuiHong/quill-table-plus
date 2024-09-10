@@ -42,7 +42,8 @@ export default class TableSelection {
   }
 
   mouseDownHandler (e) {
-    if (e.button !== 0 || !e.target.closest(".quill-table-plus")) return
+    if (e.target.closest('caption')) return;
+    if (e.button !== 0 || !e.target.closest(".quill-table-plus")) return;
     this.quill.root.addEventListener('mousemove', mouseMoveHandler, false)
     this.quill.root.addEventListener('mouseup', mouseUpHandler, false)
 
@@ -61,6 +62,9 @@ export default class TableSelection {
     function mouseMoveHandler (e) {
       if (e.button !== 0 || !e.target.closest(".quill-table-plus")) return
       const endTd = e.target.closest('td[data-row]')
+      // TODO: 여기에서 endTd가 null이어서 에러가 발생하는 경우가 있음. 왜 그런지 살펴보기
+      if (!endTd) return;
+
       const endTdRect = getRelativeRect(
         endTd.getBoundingClientRect(),
         self.quill.root.parentNode

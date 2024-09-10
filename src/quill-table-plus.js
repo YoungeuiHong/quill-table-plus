@@ -24,6 +24,7 @@ import {
   TableBody,
   TableContainer,
   TableViewWrapper,
+  TableCaption,
   rowId,
   cellId
 } from './formats/table';
@@ -39,6 +40,7 @@ class QuillTablePlus extends Module {
     Quill.register(TableContainer, true);
     Quill.register(TableViewWrapper, true);
     Quill.register(TableViewWrapper, true);
+    Quill.register(TableCaption, true);
     // register customized Header，overwriting quill built-in Header
     // Quill.register('formats/header', Header, true);
   }
@@ -128,18 +130,22 @@ class QuillTablePlus extends Module {
     // prevent user hits backspace to delete table cell
     const KeyBoard = quill.getModule('keyboard')
     quill.keyboard.addBinding(
-      { key: 'Backspace' },
-      {},
-      function (range, context) {
-        if (range.index === 0 || this.quill.getLength() <= 1) return true;
-        const [line] = this.quill.getLine(range.index);
-        if (context.offset === 0) {
-          const [prev] = this.quill.getLine(range.index - 1);
-          if (prev != null) {
-            if (prev.statics.blotName === 'table-cell-line' &&
-              line.statics.blotName !== 'table-cell-line') return false;
+        { key: 'Backspace' },
+        {},
+        function (range, context) {
+          if (range.index === 0 || this.quill.getLength() <= 1) return true;
+          const [line] = this.quill.getLine(range.index);
+
+          if (line.statics.blotName === 'table-caption') {
+            return true;
           }
-        }
+          if (context.offset === 0) {
+            const [prev] = this.quill.getLine(range.index - 1);
+            if (prev != null) {
+              if (prev.statics.blotName === 'table-cell-line' &&
+                  line.statics.blotName !== 'table-cell-line') return false;
+            }
+          }
         return true
       })
     // since only one matched bindings callback will excute.
@@ -235,6 +241,7 @@ QuillTablePlus.keyboardBindings = {
     },
   },
 
+
   'table-cell-line delete': {
     key: 'Delete',
     format: ['table-cell-line'],
@@ -288,7 +295,7 @@ QuillTablePlus.keyboardBindings = {
       if (target && target.statics.blotName === 'table-view') {
         const targetCell = target.table().rows()[0].children.head
         const targetLine = targetCell.children.head
-        
+
         this.quill.setSelection(
           targetLine.offset(this.quill.scroll),
           0,
@@ -309,7 +316,7 @@ QuillTablePlus.keyboardBindings = {
         const rows = target.table().rows()
         const targetCell = rows[rows.length - 1].children.head
         const targetLine = targetCell.children.head
-        
+
         this.quill.setSelection(
           targetLine.offset(this.quill.scroll),
           0,
@@ -348,7 +355,7 @@ function makeTableArrowHandler (up) {
           cur = cur.prev
           totalColspanOfCur += parseInt(cur.formats()['colspan'], 10)
         }
-        
+
         while (targetCell.next != null && totalColspanOfTargetCell < totalColspanOfCur) {
           targetCell = targetCell.next
           totalColspanOfTargetCell += parseInt(targetCell.formats()['colspan'], 10)
