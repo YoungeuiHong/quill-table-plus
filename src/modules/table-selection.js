@@ -12,16 +12,16 @@ export default class TableSelection {
     this.table = table
     this.quill = quill
     this.options = options
-    this.boundary = {}   // params for selected square
-    this.selectedTds = []  // array for selected table-cells
+    this.boundary = {}
+    this.selectedTds = []
     this.dragging = false
     this.selectingHandler = this.mouseDownHandler.bind(this)
     this.clearSelectionHandler  = this.clearSelection.bind(this)
 
     this.helpLinesInitial()
     this.quill.root.addEventListener('mousedown',
-      this.selectingHandler,
-      false)
+        this.selectingHandler,
+        false)
 
     this.quill.on('text-change', this.clearSelectionHandler )
   }
@@ -50,8 +50,8 @@ export default class TableSelection {
     const self = this
     const startTd = e.target.closest('td[data-row]')
     const startTdRect = getRelativeRect(
-      startTd.getBoundingClientRect(),
-      this.quill.root.parentNode
+        startTd.getBoundingClientRect(),
+        this.quill.root.parentNode
     )
     this.dragging = true
     this.boundary = computeBoundaryFromRects(startTdRect, startTdRect)
@@ -66,8 +66,8 @@ export default class TableSelection {
       if (!endTd) return;
 
       const endTdRect = getRelativeRect(
-        endTd.getBoundingClientRect(),
-        self.quill.root.parentNode
+          endTd.getBoundingClientRect(),
+          self.quill.root.parentNode
       )
       self.boundary = computeBoundaryFromRects(startTdRect, endTdRect)
       self.correctBoundary()
@@ -93,16 +93,16 @@ export default class TableSelection {
 
     tableCells.forEach(tableCell => {
       let { x, y, width, height } = getRelativeRect(
-        tableCell.domNode.getBoundingClientRect(),
-        this.quill.root.parentNode
+          tableCell.domNode.getBoundingClientRect(),
+          this.quill.root.parentNode
       )
       let isCellIntersected = (
           (x + ERROR_LIMIT >= this.boundary.x && x + ERROR_LIMIT <= this.boundary.x1) ||
           (x - ERROR_LIMIT + width >= this.boundary.x && x - ERROR_LIMIT + width <= this.boundary.x1)
-        ) && (
+      ) && (
           (y + ERROR_LIMIT >= this.boundary.y && y + ERROR_LIMIT <= this.boundary.y1) ||
           (y - ERROR_LIMIT + height >= this.boundary.y && y - ERROR_LIMIT + height <= this.boundary.y1)
-        )
+      )
       if (isCellIntersected) {
         this.boundary = computeBoundaryFromRects(this.boundary, { x, y, width, height })
       }
@@ -115,16 +115,16 @@ export default class TableSelection {
 
     return tableCells.reduce((selectedCells, tableCell) => {
       let { x, y, width, height } = getRelativeRect(
-        tableCell.domNode.getBoundingClientRect(),
-        this.quill.root.parentNode
+          tableCell.domNode.getBoundingClientRect(),
+          this.quill.root.parentNode
       )
       let isCellIncluded = (
           x + ERROR_LIMIT >= this.boundary.x &&
           x - ERROR_LIMIT + width <= this.boundary.x1
-        ) && (
+      ) && (
           y + ERROR_LIMIT >= this.boundary.y &&
           y - ERROR_LIMIT + height <= this.boundary.y1
-        )
+      )
 
       if (isCellIncluded) {
         selectedCells.push(tableCell)
@@ -173,12 +173,12 @@ export default class TableSelection {
   // It is useful when selectedTds are not changed
   refreshHelpLinesPosition () {
     const startRect = getRelativeRect(
-      this.selectedTds[0].domNode.getBoundingClientRect(),
-      this.quill.root.parentNode
+        this.selectedTds[0].domNode.getBoundingClientRect(),
+        this.quill.root.parentNode
     )
     const endRect = getRelativeRect(
-      this.selectedTds[this.selectedTds.length - 1].domNode.getBoundingClientRect(),
-      this.quill.root.parentNode
+        this.selectedTds[this.selectedTds.length - 1].domNode.getBoundingClientRect(),
+        this.quill.root.parentNode
     )
     this.boundary = computeBoundaryFromRects(startRect, endRect)
     this.repositionHelpLines()
@@ -191,8 +191,8 @@ export default class TableSelection {
     })
 
     this.quill.root.removeEventListener('mousedown',
-      this.selectingHandler,
-    false)
+        this.selectingHandler,
+        false)
 
     this.quill.off('text-change', this.clearSelectionHandler )
 
@@ -201,8 +201,8 @@ export default class TableSelection {
 
   setSelection (startRect, endRect) {
     this.boundary = computeBoundaryFromRects(
-      getRelativeRect(startRect, this.quill.root.parentNode),
-      getRelativeRect(endRect, this.quill.root.parentNode)
+        getRelativeRect(startRect, this.quill.root.parentNode),
+        getRelativeRect(endRect, this.quill.root.parentNode)
     )
     this.correctBoundary()
     this.selectedTds = this.computeSelectedTds()
@@ -257,35 +257,70 @@ export default class TableSelection {
 
     this.quill.update(Quill.sources.USER);
   }
+
+  equalizeRowHeights() {
+    const selectedCells = this.selectedTds.map(td => td.domNode);
+    if (selectedCells.length === 0) return;
+
+    const selectedRows = new Set();
+    selectedCells.forEach(cell => {
+      const rowIndex = Array.from(cell.parentElement.parentElement.children).indexOf(cell.parentElement);
+      selectedRows.add(rowIndex);
+    });
+
+    let totalHeight = 0;
+    let rowCount = 0;
+
+    selectedRows.forEach(rowIndex => {
+      const rowElement = selectedCells.find(cell => Array.from(cell.parentElement.parentElement.children).indexOf(cell.parentElement) === rowIndex)?.parentElement;
+      if (rowElement) {
+        totalHeight += rowElement.clientHeight;
+        rowCount += 1;
+      }
+    });
+
+    const averageHeight = totalHeight / rowCount;
+
+    selectedRows.forEach(rowIndex => {
+      const rowElements = Array.from(this.table.querySelectorAll('tr'));
+      const rowElement = rowElements[rowIndex];
+
+      if (rowElement) {
+        rowElement.style.height = `${averageHeight}px`;
+      }
+    });
+
+    this.quill.update(Quill.sources.USER);
+  }
 }
 
 function computeBoundaryFromRects (startRect, endRect) {
   let x = Math.min(
-    startRect.x,
-    endRect.x,
-    startRect.x + startRect.width - 1,
-    endRect.x + endRect.width - 1
+      startRect.x,
+      endRect.x,
+      startRect.x + startRect.width - 1,
+      endRect.x + endRect.width - 1
   )
 
   let x1 = Math.max(
-    startRect.x,
-    endRect.x,
-    startRect.x + startRect.width - 1,
-    endRect.x + endRect.width - 1
+      startRect.x,
+      endRect.x,
+      startRect.x + startRect.width - 1,
+      endRect.x + endRect.width - 1
   )
 
   let y = Math.min(
-    startRect.y,
-    endRect.y,
-    startRect.y + startRect.height - 1,
-    endRect.y + endRect.height - 1
+      startRect.y,
+      endRect.y,
+      startRect.y + startRect.height - 1,
+      endRect.y + endRect.height - 1
   )
 
   let y1 = Math.max(
-    startRect.y,
-    endRect.y,
-    startRect.y + startRect.height - 1,
-    endRect.y + endRect.height - 1
+      startRect.y,
+      endRect.y,
+      startRect.y + startRect.height - 1,
+      endRect.y + endRect.height - 1
   )
 
   let width = x1 - x

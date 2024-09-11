@@ -260,6 +260,16 @@ const MENU_ITEMS_DEFAULT = {
       this.quill.update(Quill.sources.USER);
     }
   },
+  equalizeRows: {
+    text: '행 높이를 같게',
+    iconSrc: operationIcon6,
+    handler() {
+      const tableContainer = Quill.find(this.table);
+      this.tableSelection.equalizeRowHeights();
+      this.tableColumnTool.updateToolCells();
+      this.quill.update(Quill.sources.USER);
+    }
+  },
 }
 
 export default class TableOperationMenu {
