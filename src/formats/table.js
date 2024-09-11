@@ -18,6 +18,8 @@ const CELL_DEFAULT = {
 }
 const ERROR_LIMIT = 5
 const CELL_MIN_WIDTH = 50
+const ROW_MIN_HEIGHT = 10;
+
 
 class TableCellLine extends Block {
   static create(value) {
@@ -249,11 +251,17 @@ class TableCell extends Container {
 
   handleMouseMove = (e) => {
     const edgeType = this.isOnEdge(e);
-    if (edgeType) {
-      this.domNode.style.cursor = 'ew-resize';
+    if (edgeType === 'bottom') {
+      this.applyCursorToCells('ns-resize');
     } else {
-      this.domNode.style.cursor = 'default';
+      this.applyCursorToCells('default');
     }
+  };
+
+  applyCursorToCells(cursorStyle) {
+    Array.from(this.domNode.querySelectorAll('td')).forEach(td => {
+      td.style.cursor = cursorStyle;
+    });
   }
 
   addEventListeners() {
@@ -452,6 +460,10 @@ class TableRow extends Container {
   static create(value) {
     const node = super.create(value)
     node.setAttribute("data-row", value.row)
+    if (value.height) {
+      node.style.height = `${value.height}px`;
+      node.setAttribute('data-height', value.height);
+    }
     return node
   }
 
@@ -497,6 +509,119 @@ class TableRow extends Container {
 
   table() {
     return this.parent && this.parent.parent
+  }
+
+  constructor(scroll, domNode) {
+    super(scroll, domNode);
+
+    this.dragging = false;
+    this.helpLine = null;
+    this.initialClientY = 0;
+    this.currentClientY = 0;
+    this.initialHeight = 0;
+    this.rowRect = {};
+    this.delta = 0;
+    this.draggingFromBottom = false;
+
+    this.addEventListeners();
+  }
+
+  handleDrag = (e) => {
+    e.preventDefault();
+    this.currentClientY = e.clientY;
+
+    if (this.initialHeight + (this.currentClientY - this.initialClientY) >= ROW_MIN_HEIGHT) {
+      this.delta = this.currentClientY - this.initialClientY;
+    } else {
+      this.delta = ROW_MIN_HEIGHT - this.initialHeight;
+    }
+
+    css(this.helpLine, {
+      'top': `${this.rowRect.top + this.rowRect.height + this.delta}px`
+    });
+  };
+
+  handleMouseUp = (e) => {
+    e.preventDefault();
+
+    if (this.dragging) {
+      const newHeight = this.initialHeight + this.delta;
+      this.domNode.style.height = `${newHeight}px`;
+
+      this.initialClientY = 0;
+      this.currentClientY = 0;
+      this.delta = 0;
+      this.initialHeight = 0;
+      this.dragging = false;
+      document.body.style.cursor = 'default';
+
+      if (this.helpLine) {
+        document.body.removeChild(this.helpLine);
+        this.helpLine = null;
+      }
+
+      this.updateTableHeight();
+    }
+
+    document.removeEventListener('mousemove', this.handleDrag, false);
+    document.removeEventListener('mouseup', this.handleMouseUp, false);
+  };
+
+  handleMouseDown = (e) => {
+    const edgeType = this.isOnEdge(e);
+    if (!edgeType) return;
+
+    document.addEventListener('mousemove', this.handleDrag, false);
+    document.addEventListener('mouseup', this.handleMouseUp, false);
+
+    e.preventDefault();
+    this.dragging = true;
+    this.initialClientY = e.clientY;
+    this.rowRect = this.domNode.getBoundingClientRect();
+    this.initialHeight = this.rowRect.height;
+
+    this.helpLine = document.createElement('div');
+    css(this.helpLine, {
+      position: 'fixed',
+      top: `${this.rowRect.top + this.rowRect.height - 1}px`,
+      left: `${this.rowRect.left}px`,
+      zIndex: '100',
+      width: `${this.domNode.closest('table').getBoundingClientRect().width}px`,
+      height: '1px',
+      backgroundColor: '#f88539'
+    });
+    document.body.appendChild(this.helpLine);
+
+    document.body.style.cursor = 'ns-resize';
+  };
+
+  handleMouseMove = (e) => {
+    const edgeType = this.isOnEdge(e);
+    if (edgeType) {
+      this.domNode.style.cursor = 'ns-resize';
+    } else {
+      this.domNode.style.cursor = 'default';
+    }
+  };
+
+  isOnEdge(event) {
+    const rect = this.domNode.getBoundingClientRect();
+    const offset = 5;
+    if (event.clientY >= rect.bottom - offset && event.clientY <= rect.bottom + offset) {
+      return 'bottom';
+    }
+    return null;
+  }
+
+  addEventListeners() {
+    this.domNode.addEventListener('mousedown', this.handleMouseDown);
+    this.domNode.addEventListener('mousemove', this.handleMouseMove);
+    window.addEventListener('resize', this.updateTableHeight.bind(this));
+  }
+
+  updateTableHeight() {
+    const newHeight = this.domNode.getBoundingClientRect().height;
+    this.domNode.style.height = `${newHeight}px`;
   }
 }
 TableRow.blotName = "table-row"

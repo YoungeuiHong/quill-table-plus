@@ -1,5 +1,6 @@
 import Quill from 'quill'
 import TableColumnTool from './modules/table-column-tool'
+import TableRowTool from './modules/table-row-tool'
 import TableSelection from './modules/table-selection'
 import TableOperationMenu from './modules/table-operation-menu'
 
@@ -212,14 +213,17 @@ class QuillTablePlus extends Module {
   showTableTools (table, quill, options) {
     this.table = table
     this.columnTool = new TableColumnTool(table, quill, options)
+    this.rowTool = new TableRowTool(table, quill, options);
     this.tableSelection = new TableSelection(table, quill, options)
   }
 
   hideTableTools () {
     this.columnTool && this.columnTool.destroy()
+    this.rowTool && this.rowTool.destroy();
     this.tableSelection && this.tableSelection.destroy()
     this.tableOperationMenu && this.tableOperationMenu.destroy()
     this.columnTool = null
+    this.rowTool = null;
     this.tableSelection = null
     this.tableOperationMenu = null
     this.table = null
